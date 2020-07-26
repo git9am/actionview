@@ -2,23 +2,19 @@
 
 namespace App\Http\Controllers;
 
+use App\Acl\Eloquent\Group;
+use App\ActiveDirectory\Eloquent\Directory;
+use App\Events\DelGroupEvent;
+use App\Http\Controllers\Controller;
+use Cartalyst\Sentinel\Users\EloquentUser;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Event;
-
-use App\Events\DelGroupEvent;
-use App\Http\Requests;
-use App\Http\Controllers\Controller;
-use App\Acl\Eloquent\Group;
-
-use App\ActiveDirectory\Eloquent\Directory;
-
-use Cartalyst\Sentinel\Users\EloquentUser;
 
 class GroupController extends Controller
 {
     public function __construct()
     {
-        $this->middleware('privilege:sys_admin', [ 'except' => [ 'search' ] ]);
+        $this->middleware('privilege:sys_admin', ['except' => ['search']]);
         parent::__construct();
     }
 
@@ -32,10 +28,10 @@ class GroupController extends Controller
         $s = $request->input('s');
         $groups = [];
         if ($s) {
-            $groups = Group::Where('name', 'like', '%' . $s .  '%')
-                ->get([ 'name' ]);
+            $groups = Group::Where('name', 'like', '%' . $s . '%')
+                ->get(['name']);
         }
-        return Response()->json([ 'ecode' => 0, 'data' => $groups ]);
+        return Response()->json(['ecode' => 0, 'data' => $groups]);
     }
 
     /**
@@ -61,13 +57,13 @@ class GroupController extends Controller
         $page_size = 30;
         $page = $request->input('page') ?: 1;
         $query = $query->skip($page_size * ($page - 1))->take($page_size);
-        $groups = $query->get([ 'name', 'users', 'directory' ]);
+        $groups = $query->get(['name', 'users', 'directory']);
 
         foreach ($groups as $group) {
             $group->users = EloquentUser::find($group->users ?: []);
         }
 
-        return Response()->json([ 'ecode' => 0, 'data' => $groups, 'options' => [ 'total' => $total, 'sizePerPage' => $page_size, 'directories' => Directory::all() ] ]);
+        return Response()->json(['ecode' => 0, 'data' => $groups, 'options' => ['total' => $total, 'sizePerPage' => $page_size, 'directories' => Directory::all()]]);
     }
 
     /**
@@ -84,7 +80,7 @@ class GroupController extends Controller
         }
 
         $group = Group::create($request->all());
-        return Response()->json([ 'ecode' => 0, 'data' => $group ]);
+        return Response()->json(['ecode' => 0, 'data' => $group]);
     }
 
     /**
@@ -101,7 +97,7 @@ class GroupController extends Controller
         }
         $group->users = EloquentUser::find($group->users);
 
-        return Response()->json([ 'ecode' => 0, 'data' => $group ]);
+        return Response()->json(['ecode' => 0, 'data' => $group]);
     }
 
     /**
@@ -158,7 +154,7 @@ class GroupController extends Controller
 
         Group::destroy($id);
         Event::fire(new DelGroupEvent($id));
-        return Response()->json([ 'ecode' => 0, 'data' => [ 'id' => $id ] ]);
+        return Response()->json(['ecode' => 0, 'data' => ['id' => $id]]);
     }
 
     /**
@@ -185,6 +181,6 @@ class GroupController extends Controller
                 $deleted_ids[] = $id;
             }
         }
-        return Response()->json([ 'ecode' => 0, 'data' => [ 'ids' => $deleted_ids ] ]);
+        return Response()->json(['ecode' => 0, 'data' => ['ids' => $deleted_ids]]);
     }
 }

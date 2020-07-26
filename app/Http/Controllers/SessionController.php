@@ -2,22 +2,16 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
-
-use App\Http\Requests;
-use App\Http\Controllers\Controller;
-use App\Customization\Eloquent\State;
-use App\System\Eloquent\SysSetting;
-use App\Project\Eloquent\AccessProjectLog;
-use App\Project\Eloquent\Project;
-
 use App\ActiveDirectory\Eloquent\Directory;
 use App\ActiveDirectory\LDAP;
-
-use Exception;
-use Cartalyst\Sentinel\Checkpoints\ThrottlingException;
+use App\Http\Controllers\Controller;
+use App\Project\Eloquent\AccessProjectLog;
+use App\Project\Eloquent\Project;
+use App\System\Eloquent\SysSetting;
 use Cartalyst\Sentinel\Checkpoints\NotActivatedException;
-
+use Cartalyst\Sentinel\Checkpoints\ThrottlingException;
+use Exception;
+use Illuminate\Http\Request;
 use Sentinel;
 
 class SessionController extends Controller
@@ -48,7 +42,7 @@ class SessionController extends Controller
                 Sentinel::removeCheckpoint('throttle');
             }
 
-            $user = Sentinel::authenticate([ 'email' => $email, 'password' => $password ]);
+            $user = Sentinel::authenticate(['email' => $email, 'password' => $password]);
         } catch (ThrottlingException $e) {
             // throttle error.
             throw new Exception($e->getMessage(), -10004);
@@ -82,9 +76,9 @@ class SessionController extends Controller
                 $user->latest_access_project = $latest_access_project->key;
             }
 
-            return Response()->json([ 'ecode' => 0, 'data' => [ 'user' => $user ] ]);
+            return Response()->json(['ecode' => 0, 'data' => ['user' => $user]]);
         } else {
-            return Response()->json([ 'ecode' => -10000, 'data' => [] ]);
+            return Response()->json(['ecode' => -10000, 'data' => []]);
         }
     }
 
@@ -125,9 +119,9 @@ class SessionController extends Controller
             if ($latest_access_project) {
                 $user->latest_access_project = $latest_access_project->key;
             }
-            return Response()->json([ 'ecode' => 0, 'data' => [ 'user' => $user ] ]);
+            return Response()->json(['ecode' => 0, 'data' => ['user' => $user]]);
         } else {
-            return Response()->json([ 'ecode' => -10001, 'data' => [ 'user' => [] ] ]);
+            return Response()->json(['ecode' => -10001, 'data' => ['user' => []]]);
         }
     }
 
@@ -140,6 +134,6 @@ class SessionController extends Controller
     public function destroy(Request $request)
     {
         Sentinel::logout();
-        return Response()->json([ 'ecode' => 0, 'data' => [] ]);
+        return Response()->json(['ecode' => 0, 'data' => []]);
     }
 }

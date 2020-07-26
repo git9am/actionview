@@ -2,25 +2,21 @@
 
 namespace App\Http\Controllers;
 
+use Activation;
+use App\Acl\Eloquent\Group;
+use App\ActiveDirectory\Eloquent\Directory;
+use App\Events\DelUserEvent;
+use App\Http\Controllers\Controller;
+use App\System\Eloquent\ResetPwdCode;
+use App\System\Eloquent\SysSetting;
+use Cartalyst\Sentinel\Users\EloquentUser;
+use Config;
+use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Event;
-
-use App\Http\Requests;
-use App\Http\Controllers\Controller;
-use App\Events\DelUserEvent;
-use App\Acl\Eloquent\Group;
-
-use App\ActiveDirectory\Eloquent\Directory;
-
 use Maatwebsite\Excel\Facades\Excel;
-use Cartalyst\Sentinel\Users\EloquentUser;
-use Sentinel;
-use Activation;
-
-use App\System\Eloquent\SysSetting;
-use App\System\Eloquent\ResetPwdCode;
 use Mail;
-use Config;
+use Sentinel;
 
 class UserController extends Controller
 {
@@ -28,7 +24,7 @@ class UserController extends Controller
 
     public function __construct()
     {
-        $this->middleware('privilege:sys_admin', [ 'except' => [ 'register', 'search', 'show', 'sendMailForResetpwd', 'showResetpwd', 'doResetpwd' ] ]);
+        $this->middleware('privilege:sys_admin', ['except' => ['register', 'search', 'show', 'sendMailForResetpwd', 'showResetpwd', 'doResetpwd']]);
         parent::__construct();
     }
 
@@ -42,9 +38,9 @@ class UserController extends Controller
         $s = $request->input('s');
         $users = [];
         if ($s) {
-            $search_users = EloquentUser::Where('first_name', 'like', '%' . $s .  '%')
-                                ->orWhere('email', 'like', '%' . $s .  '%')
-                                ->get([ 'first_name', 'last_name', 'email', 'invalid_flag' ]);
+            $search_users = EloquentUser::Where('first_name', 'like', '%' . $s . '%')
+                ->orWhere('email', 'like', '%' . $s . '%')
+                ->get(['first_name', 'last_name', 'email', 'invalid_flag']);
 
             $i = 0;
             foreach ($search_users as $key => $user) {
@@ -60,7 +56,7 @@ class UserController extends Controller
                 }
             }
         }
-        return Response()->json([ 'ecode' => 0, 'data' => $users ]);
+        return Response()->json(['ecode' => 0, 'data' => $users]);
     }
 
     /**
@@ -97,7 +93,7 @@ class UserController extends Controller
         $page_size = 50;
         $page = $request->input('page') ?: 1;
         $query = $query->skip($page_size * ($page - 1))->take($page_size);
-        $all_users = $query->get([ 'first_name', 'last_name', 'email', 'phone', 'directory', 'invalid_flag' ]);
+        $all_users = $query->get(['first_name', 'last_name', 'email', 'phone', 'directory', 'invalid_flag']);
 
         $users = [];
         foreach ($all_users as $user) {
@@ -106,13 +102,13 @@ class UserController extends Controller
             $tmp['first_name'] = $user->first_name;
             $tmp['email'] = $user->email;
             $tmp['phone'] = $user->phone ?: '';
-            $tmp['groups'] = array_column(Group::whereRaw([ 'users' => $user->id ])->get([ 'name' ])->toArray() ?: [], 'name');
+            $tmp['groups'] = array_column(Group::whereRaw(['users' => $user->id])->get(['name'])->toArray() ?: [], 'name');
             $tmp['directory'] = $user->directory ?: 'self';
             $tmp['status'] = $user->invalid_flag === 1 ? 'invalid' : (Activation::completed($user) ? 'active' : 'unactivated');
 
             $users[] = $tmp;
         }
-        return Response()->json([ 'ecode' => 0, 'data' => $users, 'options' => [ 'total' => $total, 'sizePerPage' => $page_size, 'groups' => Group::all(), 'directories' => Directory::all() ] ]);
+        return Response()->json(['ecode' => 0, 'data' => $users, 'options' => ['total' => $total, 'sizePerPage' => $page_size, 'groups' => Group::all(), 'directories' => Directory::all()]]);
     }
 
     /**
@@ -131,7 +127,7 @@ class UserController extends Controller
             throw new \UnexpectedValueException('the email can not be empty.', -10101);
         }
 
-        if (Sentinel::findByCredentials([ 'email' => $email ])) {
+        if (Sentinel::findByCredentials(['email' => $email])) {
             throw new \InvalidArgumentException('the email has already been registered.', -10102);
         }
 
@@ -139,8 +135,8 @@ class UserController extends Controller
             throw new \UnexpectedValueException('the password can not be empty.', -10103);
         }
 
-        $user = Sentinel::register([ 'first_name' => $first_name, 'email' => $email, 'password' => $password ], true);
-        return Response()->json([ 'ecode' => 0, 'data' => $user ]);
+        $user = Sentinel::register(['first_name' => $first_name, 'email' => $email, 'password' => $password], true);
+        return Response()->json(['ecode' => 0, 'data' => $user]);
     }
 
     /**
@@ -159,16 +155,16 @@ class UserController extends Controller
             throw new \UnexpectedValueException('the email can not be empty.', -10101);
         }
 
-        if (Sentinel::findByCredentials([ 'email' => $email ])) {
+        if (Sentinel::findByCredentials(['email' => $email])) {
             throw new \InvalidArgumentException('email has already existed.', -10102);
         }
 
         $phone = $request->input('phone') ? $request->input('phone') : '';
 
-        $user = Sentinel::register([ 'first_name' => $first_name, 'email' => $email, 'password' => 'actionview', 'phone' => $phone ], true);
+        $user = Sentinel::register(['first_name' => $first_name, 'email' => $email, 'password' => 'actionview', 'phone' => $phone], true);
         $user->status = Activation::completed($user) ? 'active' : 'unactivated';
 
-        return Response()->json([ 'ecode' => 0, 'data' => $user ]);
+        return Response()->json(['ecode' => 0, 'data' => $user]);
     }
 
     /**
@@ -197,7 +193,7 @@ class UserController extends Controller
             $reader = $reader->getSheet(0);
             $data = $reader->toArray();
 
-            $fields = [ 'first_name' => '姓名', 'email' => '邮箱', 'phone' => '手机号' ];
+            $fields = ['first_name' => '姓名', 'email' => '邮箱', 'phone' => '手机号'];
             $data = $this->arrangeExcel($data, $fields);
 
             foreach ($data as $value) {
@@ -211,20 +207,20 @@ class UserController extends Controller
             }
 
             foreach ($data as $value) {
-                $old_user = Sentinel::findByCredentials([ 'email' => $value['email'] ]);
+                $old_user = Sentinel::findByCredentials(['email' => $value['email']]);
                 if ($old_user) {
                     if ($pattern == '1') {
                         continue;
                     } else {
-                        Sentinel::update($old_user, $value + [ 'password' => 'actionview' ]);
+                        Sentinel::update($old_user, $value + ['password' => 'actionview']);
                     }
                 } else {
-                    Sentinel::register($value + [ 'password' => 'actionview' ], true);
+                    Sentinel::register($value + ['password' => 'actionview'], true);
                 }
             }
         });
 
-        return Response()->json([ 'ecode' => 0, 'data' => [ 'ok' => true ] ]);
+        return Response()->json(['ecode' => 0, 'data' => ['ok' => true]]);
     }
 
     /**
@@ -235,7 +231,7 @@ class UserController extends Controller
      */
     public function show($id)
     {
-        return Response()->json([ 'ecode' => 0, 'data' => Sentinel::findById($id) ]);
+        return Response()->json(['ecode' => 0, 'data' => Sentinel::findById($id)]);
     }
 
     /**
@@ -259,7 +255,7 @@ class UserController extends Controller
             if (!$email) {
                 throw new \UnexpectedValueException('the email can not be empty.', -10101);
             }
-            if ($user = Sentinel::findByCredentials([ 'email' => $email ])) {
+            if ($user = Sentinel::findByCredentials(['email' => $email])) {
                 if ($user->id !== $id) {
                     throw new \InvalidArgumentException('email has already existed.', -10102);
                 }
@@ -282,7 +278,7 @@ class UserController extends Controller
         $user = Sentinel::update($user, array_only($request->all(), ['first_name', 'email', 'phone', 'invalid_flag']));
         $user->status = $user->invalid_flag === 1 ? 'invalid' : (Activation::completed($user) ? 'active' : 'unactivated');
 
-        return Response()->json([ 'ecode' => 0, 'data' => $user ]);
+        return Response()->json(['ecode' => 0, 'data' => $user]);
     }
 
     /**
@@ -303,7 +299,7 @@ class UserController extends Controller
 
         $user->delete();
         Event::fire(new DelUserEvent($id));
-        return Response()->json([ 'ecode' => 0, 'data' => [ 'id' => $id ] ]);
+        return Response()->json(['ecode' => 0, 'data' => ['id' => $id]]);
     }
 
     /**
@@ -331,7 +327,7 @@ class UserController extends Controller
                 $deleted_ids[] = $id;
             }
         }
-        return Response()->json([ 'ecode' => 0, 'data' => [ 'ids' => $deleted_ids ] ]);
+        return Response()->json(['ecode' => 0, 'data' => ['ids' => $deleted_ids]]);
     }
 
     /**
@@ -355,11 +351,11 @@ class UserController extends Controller
                 if (isset($user->directory) && $user->directory && $user->directory != 'self') {
                     continue;
                 }
-                Sentinel::update($user, [ 'invalid_flag' => $flag ]);
+                Sentinel::update($user, ['invalid_flag' => $flag]);
                 $new_ids[] = $id;
             }
         }
-        return Response()->json([ 'ecode' => 0, 'data' => [ 'ids' => $new_ids ] ]);
+        return Response()->json(['ecode' => 0, 'data' => ['ids' => $new_ids]]);
     }
 
     /**
@@ -376,13 +372,13 @@ class UserController extends Controller
             throw new \UnexpectedValueException('the user does not exist.', -10106);
         }
 
-        $valid = Sentinel::validForUpdate($user, [ 'password' => 'actionview' ]);
+        $valid = Sentinel::validForUpdate($user, ['password' => 'actionview']);
         if (!$valid) {
             throw new \UnexpectedValueException('updating the user does fails.', -10107);
         }
 
-        $user = Sentinel::update($user, [ 'password' => 'actionview' ]);
-        return Response()->json([ 'ecode' => 0, 'data' => $user ]);
+        $user = Sentinel::update($user, ['password' => 'actionview']);
+        return Response()->json(['ecode' => 0, 'data' => $user]);
     }
 
     /**
@@ -410,7 +406,7 @@ class UserController extends Controller
             throw new \UnexpectedValueException('sending the email is too often.', -10016);
         }
 
-        $user = Sentinel::findByCredentials([ 'email' => $email ]);
+        $user = Sentinel::findByCredentials(['email' => $email]);
         if (!$user) {
             throw new \UnexpectedValueException('the user is not exists.', -10010);
         } elseif ($user->invalid_flag === 1) {
@@ -445,7 +441,7 @@ class UserController extends Controller
             'expired_at' => time() + 24 * 60 * 60,
         ]);
 
-        return Response()->json([ 'ecode' => 0, 'data' => [ 'sendto_email' => $obscured_email ] ]);
+        return Response()->json(['ecode' => 0, 'data' => ['sendto_email' => $obscured_email]]);
     }
 
     /**
@@ -520,7 +516,7 @@ class UserController extends Controller
         }
 
         $email = $reset_code->email;
-        $user = Sentinel::findByCredentials([ 'email' => $email ]);
+        $user = Sentinel::findByCredentials(['email' => $email]);
         if (!$user) {
             throw new \UnexpectedValueException('the user is not exists.', -10010);
         } elseif ($user->invalid_flag === 1) {
@@ -529,7 +525,7 @@ class UserController extends Controller
             throw new \UnexpectedValueException('the user is external sync user.', -10012);
         }
 
-        return Response()->json([ 'ecode' => 0, 'data' => [ 'email' => $reset_code['email'] ] ]);
+        return Response()->json(['ecode' => 0, 'data' => ['email' => $reset_code['email']]]);
     }
 
     /**
@@ -562,7 +558,7 @@ class UserController extends Controller
         }
 
         $email = $reset_code->email;
-        $user = Sentinel::findByCredentials([ 'email' => $email ]);
+        $user = Sentinel::findByCredentials(['email' => $email]);
         if (!$user) {
             throw new \UnexpectedValueException('the user is not exsits.', -10010);
         } elseif ($user->invalid_flag === 1) {
@@ -571,17 +567,17 @@ class UserController extends Controller
             throw new \UnexpectedValueException('the user is external sync user.', -10012);
         }
 
-        $valid = Sentinel::validForUpdate($user, [ 'password' => $password ]);
+        $valid = Sentinel::validForUpdate($user, ['password' => $password]);
         if (!$valid) {
             throw new \UnexpectedValueException('updating the user does fails.', -10107);
         }
 
-        $user = Sentinel::update($user, [ 'password' => $password ]);
+        $user = Sentinel::update($user, ['password' => $password]);
 
         $reset_code->invalid_flag = 1;
         $reset_code->save();
-        
-        return Response()->json([ 'ecode' => 0, 'data' => $user ]);
+
+        return Response()->json(['ecode' => 0, 'data' => $user]);
     }
 
     /**
@@ -596,9 +592,9 @@ class UserController extends Controller
         header("Content-type:text/csv;charset=utf-8");
         header("Content-Disposition:attachment;filename=import-user-template.csv");
 
-        fputcsv($output, [ 'name', 'email', 'phone' ]);
-        fputcsv($output, [ 'Tom', 'tom@actionview.cn', '13811111111' ]);
-        fputcsv($output, [ 'Alice', 'alice@actionview.cn', '13611111111' ]);
+        fputcsv($output, ['name', 'email', 'phone']);
+        fputcsv($output, ['Tom', 'tom@actionview.cn', '13811111111']);
+        fputcsv($output, ['Alice', 'alice@actionview.cn', '13611111111']);
         fclose($output) or die("can't close php://output");
         exit;
     }

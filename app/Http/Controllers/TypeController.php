@@ -2,15 +2,10 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
-
-use App\Http\Requests;
-use App\Http\Controllers\Controller;
 use App\Customization\Eloquent\Type;
-use App\Workflow\Eloquent\Definition;
-use App\Customization\Eloquent\Screen;
+use App\Http\Controllers\Controller;
 use App\Project\Provider;
-use DB;
+use Illuminate\Http\Request;
 
 class TypeController extends Controller
 {
@@ -21,16 +16,16 @@ class TypeController extends Controller
      */
     public function index($project_key)
     {
-        $types = Type::where([ 'project_key' => $project_key ])->orderBy('sn', 'asc')->get();
+        $types = Type::where(['project_key' => $project_key])->orderBy('sn', 'asc')->get();
         foreach ($types as $type) {
             $type->is_used = $this->isFieldUsedByIssue($project_key, 'type', $type->toArray());
         }
 
         $screens = Provider::getScreenList($project_key, ['name']);
         $workflows = Provider::getWorkflowList($project_key, ['name']);
-        $options = [ 'screens' => $screens, 'workflows' => $workflows ];
+        $options = ['screens' => $screens, 'workflows' => $workflows];
 
-        return Response()->json([ 'ecode' => 0, 'data' => $types, 'options' => $options ]);
+        return Response()->json(['ecode' => 0, 'data' => $types, 'options' => $options]);
     }
 
     /**
@@ -50,7 +45,7 @@ class TypeController extends Controller
         if (!$abb) {
             throw new \UnexpectedValueException('the abb can not be empty.', -12002);
         }
-        
+
         // check screen_id
         $screen_id = $request->input('screen_id');
         if (!$screen_id) {
@@ -80,7 +75,7 @@ class TypeController extends Controller
         //    throw new \UnexpectedValueException('the related workflow is not exists.', -10002);
         //}
 
-        $type = Type::create([ 'project_key' => $project_key, 'sn' => time() ] + $request->all());
+        $type = Type::create(['project_key' => $project_key, 'sn' => time()] + $request->all());
         return Response()->json(['ecode' => 0, 'data' => $type]);
     }
 
@@ -234,6 +229,6 @@ class TypeController extends Controller
             }
         }
 
-        return Response()->json(['ecode' => 0, 'data' => [ 'sequence' => $sequence_types ?: null, 'default' => $default_type_id ?: null ]]);
+        return Response()->json(['ecode' => 0, 'data' => ['sequence' => $sequence_types ?: null, 'default' => $default_type_id ?: null]]);
     }
 }

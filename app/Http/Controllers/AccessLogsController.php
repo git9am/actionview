@@ -2,13 +2,9 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Event;
-
-use App\Http\Requests;
 use App\Http\Controllers\Controller;
-
 use App\System\Eloquent\ApiAccessLogs;
+use Illuminate\Http\Request;
 use Maatwebsite\Excel\Facades\Excel;
 
 class AccessLogsController extends Controller
@@ -93,7 +89,7 @@ class AccessLogsController extends Controller
             exit();
         }
 
-        return Response()->json([ 'ecode' => 0, 'data' => $logs, 'options' => [ 'total' => $total, 'sizePerPage' => $page_size ] ]);
+        return Response()->json(['ecode' => 0, 'data' => $logs, 'options' => ['total' => $total, 'sizePerPage' => $page_size]]);
     }
 
     /**
@@ -116,7 +112,7 @@ class AccessLogsController extends Controller
             '请求时长(毫秒)',
             '来源IP',
             'User-Agent',
-            'Body'
+            'Body',
         ];
 
         $file_name = 'access-logs';
@@ -129,7 +125,7 @@ class AccessLogsController extends Controller
                     $tmp[] = $log->request_method ?: '';
                     $tmp[] = $log->request_url ?: '';
                     $tmp[] = $log->module ?: '';
-                    $tmp[] = $log->requested_start_at ? date('Y-m-d h:i:s', intval($log->requested_start_at / 1000)): '';
+                    $tmp[] = $log->requested_start_at ? date('Y-m-d h:i:s', intval($log->requested_start_at / 1000)) : '';
                     $tmp[] = $log->requested_end_at ? date('Y-m-d h:i:s', intval($log->requested_end_at / 1000)) : '';
                     $tmp[] = $log->exec_time ?: '';
                     $tmp[] = $log->request_source_ip ?: '';

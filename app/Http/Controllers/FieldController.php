@@ -2,19 +2,15 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Event;
-
-use App\Events\FieldChangeEvent;
-use App\Events\FieldDeleteEvent;
-use App\Http\Requests;
-use App\Http\Controllers\Controller;
 use App\Customization\Eloquent\Field;
 use App\Customization\Eloquent\Screen;
+use App\Events\FieldChangeEvent;
+use App\Events\FieldDeleteEvent;
+use App\Http\Controllers\Controller;
 use App\Project\Eloquent\Project;
 use App\Project\Provider;
-
-use DB;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Event;
 
 class FieldController extends Controller
 {
@@ -72,7 +68,7 @@ class FieldController extends Controller
         'labels',
         'original_estimate',
         'story_points',
-        'attachments'
+        'attachments',
     ];
 
     private $all_types = [
@@ -93,7 +89,7 @@ class FieldController extends Controller
         'MultiVersion',
         'SingleUser',
         'MultiUser',
-        'Url'
+        'Url',
     ];
     /**
      * Display a listing of the resource.
@@ -104,7 +100,7 @@ class FieldController extends Controller
     {
         $fields = Provider::getFieldList($project_key);
         foreach ($fields as $field) {
-            $field->screens = Screen::whereRaw([ 'field_ids' => $field->id ])
+            $field->screens = Screen::whereRaw(['field_ids' => $field->id])
                 ->orderBy('project_key', 'asc')
                 ->get(['project_key', 'name'])
                 ->toArray();
@@ -116,7 +112,7 @@ class FieldController extends Controller
             });
         }
         $types = Provider::getTypeList($project_key, ['name']);
-        return Response()->json(['ecode' => 0, 'data' => $fields, 'options' => [ 'types' => $types ]]);
+        return Response()->json(['ecode' => 0, 'data' => $fields, 'options' => ['types' => $types]]);
     }
 
     /**
@@ -162,7 +158,7 @@ class FieldController extends Controller
             throw new \UnexpectedValueException('the type is incorrect type.', -12205);
         }
 
-        $optionTypes = [ 'Select', 'MultiSelect', 'RadioGroup', 'CheckboxGroup' ];
+        $optionTypes = ['Select', 'MultiSelect', 'RadioGroup', 'CheckboxGroup'];
         if (in_array($type, $optionTypes)) {
             $optionValues = $request->input('optionValues') ?: [];
             foreach ($optionValues as $key => $val) {
@@ -182,9 +178,9 @@ class FieldController extends Controller
                     $defaultValue = implode(',', array_intersect($defaults, $options));
                 }
             }
-            $field = Field::create([ 'project_key' => $project_key, 'optionValues' => $optionValues, 'defaultValue' => $defaultValue ] + $request->all());
+            $field = Field::create(['project_key' => $project_key, 'optionValues' => $optionValues, 'defaultValue' => $defaultValue] + $request->all());
         } else {
-            $field = Field::create([ 'project_key' => $project_key ] + $request->all());
+            $field = Field::create(['project_key' => $project_key] + $request->all());
         }
         return Response()->json(['ecode' => 0, 'data' => $field]);
     }
@@ -203,7 +199,7 @@ class FieldController extends Controller
         //    throw new \UnexpectedValueException('the field does not exist or is not in the project.', -10002);
         //}
         // get related screen
-        $field->screens = Screen::whereRaw([ 'field_ids' => $id ])->get(['name']);
+        $field->screens = Screen::whereRaw(['field_ids' => $id])->get(['name']);
 
         return Response()->json(['ecode' => 0, 'data' => $field]);
     }
@@ -231,7 +227,7 @@ class FieldController extends Controller
 
         $updValues = [];
 
-        $optionTypes = [ 'Select', 'MultiSelect', 'RadioGroup', 'CheckboxGroup' ];
+        $optionTypes = ['Select', 'MultiSelect', 'RadioGroup', 'CheckboxGroup'];
         if (in_array($field->type, $optionTypes)) {
             $optionValues = $request->input('optionValues');
             $defaultValue = $request->input('defaultValue');
@@ -269,7 +265,7 @@ class FieldController extends Controller
             }
         }
 
-        $mmTypes = [ 'Number', 'Integer' ];
+        $mmTypes = ['Number', 'Integer'];
         if (in_array($field->type, $mmTypes)) {
             $maxValue = $request->input('maxValue');
             if (isset($maxValue)) {
@@ -282,7 +278,7 @@ class FieldController extends Controller
             }
         }
 
-        $mlTypes = [ 'Text', 'TextArea' ];
+        $mlTypes = ['Text', 'TextArea'];
         if (in_array($field->type, $mlTypes)) {
             $maxLength = $request->input('maxLength');
             if (isset($maxLength)) {
@@ -314,7 +310,7 @@ class FieldController extends Controller
             throw new \UnexpectedValueException('the field is built in the system.', -12208);
         }
 
-        $isUsed = Screen::whereRaw([ 'field_ids' => $id ])->exists();
+        $isUsed = Screen::whereRaw(['field_ids' => $id])->exists();
         if ($isUsed) {
             throw new \UnexpectedValueException('the field has been used in screen.', -12207);
         }
@@ -333,7 +329,7 @@ class FieldController extends Controller
     public function viewUsedInProject($project_key, $id)
     {
         if ($project_key !== '$_sys_$') {
-            return Response()->json(['ecode' => 0, 'data' => [] ]);
+            return Response()->json(['ecode' => 0, 'data' => []]);
         }
 
         $res = [];
@@ -342,14 +338,14 @@ class FieldController extends Controller
             $screens = Screen::where('field_ids', $id)
                 ->where('project_key', '<>', '$_sys_$')
                 ->where('project_key', $project->key)
-                ->get([ 'id', 'name' ])
+                ->get(['id', 'name'])
                 ->toArray();
 
             if ($screens) {
-                $res[] = [ 'key' => $project->key, 'name' => $project->name, 'status' => $project->status, 'screens' => $screens ];
+                $res[] = ['key' => $project->key, 'name' => $project->name, 'status' => $project->status, 'screens' => $screens];
             }
         }
 
-        return Response()->json(['ecode' => 0, 'data' => $res ]);
+        return Response()->json(['ecode' => 0, 'data' => $res]);
     }
 }

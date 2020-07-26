@@ -2,15 +2,13 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
-
-use App\Http\Requests;
-use App\Http\Controllers\Controller;
 use App\Customization\Eloquent\Type;
-use App\Workflow\Eloquent\Definition;
-use App\Workflow\Workflow;
+use App\Http\Controllers\Controller;
 use App\Project\Eloquent\Project;
 use App\Project\Provider;
+use App\Workflow\Eloquent\Definition;
+use App\Workflow\Workflow;
+use Illuminate\Http\Request;
 
 class WorkflowController extends Controller
 {
@@ -21,12 +19,12 @@ class WorkflowController extends Controller
      */
     public function index($project_key)
     {
-        $workflows = Provider::getWorkflowList($project_key, [ 'name', 'project_key', 'description', 'latest_modified_time', 'latest_modifier', 'steps' ]);
+        $workflows = Provider::getWorkflowList($project_key, ['name', 'project_key', 'description', 'latest_modified_time', 'latest_modifier', 'steps']);
         foreach ($workflows as $workflow) {
             $workflow->is_used = Type::where('workflow_id', $workflow->id)->exists();
         }
 
-        return Response()->json([ 'ecode' => 0, 'data' => $workflows ]);
+        return Response()->json(['ecode' => 0, 'data' => $workflows]);
     }
 
     /**
@@ -44,7 +42,7 @@ class WorkflowController extends Controller
 
         $contents = $request->input('contents');
         if (isset($contents) && $contents) {
-            $latest_modifier = [ 'id' => $this->user->id, 'name' => $this->user->first_name ];
+            $latest_modifier = ['id' => $this->user->id, 'name' => $this->user->first_name];
             $latest_modified_time = date('Y-m-d H:i:s');
             $state_ids = Workflow::getStates($contents);
             $screen_ids = Workflow::getScreens($contents);
@@ -60,7 +58,7 @@ class WorkflowController extends Controller
         $source_id = $request->input('source_id');
         if (isset($source_id) && $source_id) {
             $source_definition = Definition::find($source_id);
-            $latest_modifier = [ 'id' => $this->user->id, 'name' => $this->user->first_name ];
+            $latest_modifier = ['id' => $this->user->id, 'name' => $this->user->first_name];
             $latest_modified_time = date('Y-m-d H:i:s');
             $state_ids = $source_definition->state_ids;
             $screen_ids = $source_definition->screen_ids;
@@ -68,8 +66,8 @@ class WorkflowController extends Controller
             $contents = $source_definition->contents;
         }
 
-        $workflow = Definition::create([ 'project_key' => $project_key, 'latest_modifier' => $latest_modifier, 'latest_modified_time' => $latest_modified_time, 'state_ids' => $state_ids, 'screen_ids' => $screen_ids, 'steps' => $steps, 'contents' => $contents ] + $request->all());
-        return Response()->json([ 'ecode' => 0, 'data' => $workflow ]);
+        $workflow = Definition::create(['project_key' => $project_key, 'latest_modifier' => $latest_modifier, 'latest_modified_time' => $latest_modified_time, 'state_ids' => $state_ids, 'screen_ids' => $screen_ids, 'steps' => $steps, 'contents' => $contents] + $request->all());
+        return Response()->json(['ecode' => 0, 'data' => $workflow]);
     }
 
     /**
@@ -82,7 +80,7 @@ class WorkflowController extends Controller
     {
         $workflow = Definition::find($id);
         if ($workflow) {
-            return Response()->json([ 'ecode' => 0, 'data' => $workflow ]);
+            return Response()->json(['ecode' => 0, 'data' => $workflow]);
         } else {
             throw new \UnexpectedValueException('the workflow does not exist or is not in the project.', -12101);
         }
@@ -108,7 +106,7 @@ class WorkflowController extends Controller
         $events = Provider::getEventOptions($project_key);
         $users = Provider::getUserList($project_key);
 
-        return Response()->json([ 'ecode' => 0, 'data' => $workflow, 'options' => [ 'states' => $states, 'screens' => $screens, 'resolutions' => $resolutions, 'events' => $events, 'roles' => $roles, 'users' => $users ] ]);
+        return Response()->json(['ecode' => 0, 'data' => $workflow, 'options' => ['states' => $states, 'screens' => $screens, 'resolutions' => $resolutions, 'events' => $events, 'roles' => $roles, 'users' => $users]]);
     }
 
     /**
@@ -133,7 +131,7 @@ class WorkflowController extends Controller
 
         $contents = $request->input('contents');
         if (isset($contents)) {
-            $latest_modifier = [ 'id' => $this->user->id, 'name' => $this->user->first_name ];
+            $latest_modifier = ['id' => $this->user->id, 'name' => $this->user->first_name];
             $latest_modified_time = date('Y-m-d H:i:s');
 
             $workflow->latest_modifier = $latest_modifier;
@@ -143,8 +141,8 @@ class WorkflowController extends Controller
             $workflow->steps = Workflow::getStepNum($contents);
         }
 
-        $workflow->fill($request->except([ 'project_key' ]))->save();
-        return Response()->json([ 'ecode' => 0, 'data' => Definition::find($id) ]);
+        $workflow->fill($request->except(['project_key']))->save();
+        return Response()->json(['ecode' => 0, 'data' => Definition::find($id)]);
     }
 
     /**
@@ -166,7 +164,7 @@ class WorkflowController extends Controller
         }
 
         Definition::destroy($id);
-        return Response()->json([ 'ecode' => 0, 'data' => [ 'id' => $id ] ]);
+        return Response()->json(['ecode' => 0, 'data' => ['id' => $id]]);
     }
 
     /**
@@ -177,7 +175,7 @@ class WorkflowController extends Controller
     public function viewUsedInProject($project_key, $id)
     {
         if ($project_key !== '$_sys_$') {
-            return Response()->json(['ecode' => 0, 'data' => [] ]);
+            return Response()->json(['ecode' => 0, 'data' => []]);
         }
 
         $res = [];
@@ -186,14 +184,14 @@ class WorkflowController extends Controller
             $types = Type::where('workflow_id', $id)
                 ->where('project_key', '<>', '$_sys_$')
                 ->where('project_key', $project->key)
-                ->get([ 'id', 'name' ])
+                ->get(['id', 'name'])
                 ->toArray();
 
             if ($types) {
-                $res[] = [ 'key' => $project->key, 'name' => $project->name, 'status' => $project->status, 'types' => $types ];
+                $res[] = ['key' => $project->key, 'name' => $project->name, 'status' => $project->status, 'types' => $types];
             }
         }
 
-        return Response()->json(['ecode' => 0, 'data' => $res ]);
+        return Response()->json(['ecode' => 0, 'data' => $res]);
     }
 }

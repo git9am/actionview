@@ -2,16 +2,14 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
-
-use App\Http\Requests;
-use App\Http\Controllers\Controller;
-use App\Customization\Eloquent\Type;
-use App\Customization\Eloquent\Screen;
 use App\Customization\Eloquent\Field;
-use App\Workflow\Eloquent\Definition;
+use App\Customization\Eloquent\Screen;
+use App\Customization\Eloquent\Type;
+use App\Http\Controllers\Controller;
 use App\Project\Eloquent\Project;
 use App\Project\Provider;
+use App\Workflow\Eloquent\Definition;
+use Illuminate\Http\Request;
 
 class ScreenController extends Controller
 {
@@ -22,11 +20,11 @@ class ScreenController extends Controller
      */
     public function index($project_key)
     {
-        $screens = Provider::getScreenList($project_key, [ 'name', 'project_key', 'schema', 'description' ]);
+        $screens = Provider::getScreenList($project_key, ['name', 'project_key', 'schema', 'description']);
         foreach ($screens as $screen) {
-            $workflows = Definition::whereRaw([ 'screen_ids' => $screen->id ])
+            $workflows = Definition::whereRaw(['screen_ids' => $screen->id])
                 ->orderBy('project_key', 'asc')
-                ->get([ 'project_key', 'name' ])
+                ->get(['project_key', 'name'])
                 ->toArray();
             $screen->workflows = $workflows;
 
@@ -41,8 +39,8 @@ class ScreenController extends Controller
             });
         }
 
-        $fields = Field::Where([ 'project_key' => [ '$in' => [ $project_key, '$_sys_$' ] ] ])->orderBy('created_at', 'asc')->get(['name', 'key']);
-        return Response()->json([ 'ecode' => 0, 'data' => $screens, 'options' => [ 'fields' => $fields ] ]);
+        $fields = Field::Where(['project_key' => ['$in' => [$project_key, '$_sys_$']]])->orderBy('created_at', 'asc')->get(['name', 'key']);
+        return Response()->json(['ecode' => 0, 'data' => $screens, 'options' => ['fields' => $fields]]);
     }
 
     /**
@@ -70,7 +68,7 @@ class ScreenController extends Controller
             $schema = $this->createSchema($field_ids, $required_field_ids);
         }
 
-        $screen = Screen::create(['schema' => $schema, 'field_ids' => $field_ids, 'project_key' => $project_key ] + $request->all());
+        $screen = Screen::create(['schema' => $schema, 'field_ids' => $field_ids, 'project_key' => $project_key] + $request->all());
         return Response()->json(['ecode' => 0, 'data' => $screen]);
     }
 
@@ -169,7 +167,7 @@ class ScreenController extends Controller
             throw new \UnexpectedValueException('the screen has been bound to type.', -12302);
         }
 
-        $isUsed = Definition::whereRaw([ 'screen_ids' => $id ])->exists();
+        $isUsed = Definition::whereRaw(['screen_ids' => $id])->exists();
         if ($isUsed) {
             throw new \UnexpectedValueException('the screen has been used in workflow.', -12303);
         }
@@ -209,7 +207,7 @@ class ScreenController extends Controller
     public function viewUsedInProject($project_key, $id)
     {
         if ($project_key !== '$_sys_$') {
-            return Response()->json(['ecode' => 0, 'data' => [] ]);
+            return Response()->json(['ecode' => 0, 'data' => []]);
         }
 
         $res = [];
@@ -218,23 +216,23 @@ class ScreenController extends Controller
             $types = Type::where('screen_id', $id)
                 ->where('project_key', '<>', '$_sys_$')
                 ->where('project_key', $project->key)
-                ->get([ 'id', 'name' ])
+                ->get(['id', 'name'])
                 ->toArray();
 
             $workflows = Definition::where('screen_ids', $id)
                 ->where('project_key', '<>', '$_sys_$')
                 ->where('project_key', $project->key)
-                ->get([ 'id', 'name' ])
+                ->get(['id', 'name'])
                 ->toArray();
 
             if ($types || $workflows) {
-                $tmp = [ 'key' => $project->key, 'name' => $project->name, 'status' => $project->status ];
+                $tmp = ['key' => $project->key, 'name' => $project->name, 'status' => $project->status];
                 $tmp['types'] = $types ?: [];
                 $tmp['workflows'] = $workflows ?: [];
                 $res[] = $tmp;
             }
         }
 
-        return Response()->json(['ecode' => 0, 'data' => $res ]);
+        return Response()->json(['ecode' => 0, 'data' => $res]);
     }
 }

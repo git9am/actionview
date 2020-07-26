@@ -2,17 +2,13 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Event;
-
 use App\Events\IssueEvent;
-use App\Http\Requests;
 use App\Http\Controllers\Controller;
-use App\Customization\Eloquent\State;
 use App\Project\Eloquent\Labels;
-use App\Project\Eloquent\Board;
 use App\Project\Provider;
 use DB;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Event;
 
 class LabelsController extends Controller
 {
@@ -29,7 +25,7 @@ class LabelsController extends Controller
      */
     public function index(Request $request, $project_key)
     {
-        $labels = Labels::where([ 'project_key' => $project_key ])->orderBy('_id', 'asc')->get();
+        $labels = Labels::where(['project_key' => $project_key])->orderBy('_id', 'asc')->get();
         foreach ($labels as $key => $label) {
             $label->is_used = $this->isFieldUsedByIssue($project_key, 'labels', $label->toArray());
 
@@ -47,8 +43,8 @@ class LabelsController extends Controller
                 ->count();
             $label->all_cnt = $all_cnt;
         }
-            
-        return Response()->json([ 'ecode' => 0, 'data' => $labels ]);
+
+        return Response()->json(['ecode' => 0, 'data' => $labels]);
     }
 
     /**
@@ -68,7 +64,7 @@ class LabelsController extends Controller
             throw new \UnexpectedValueException('label name cannot be repeated', -16102);
         }
 
-        $label = Labels::create([ 'project_key' => $project_key ] + $request->all());
+        $label = Labels::create(['project_key' => $project_key] + $request->all());
         return Response()->json(['ecode' => 0, 'data' => $label]);
     }
 
@@ -146,7 +142,7 @@ class LabelsController extends Controller
 
         Labels::destroy($id);
 
-        return Response()->json(['ecode' => 0, 'data' => [ 'id' => $id ]]);
+        return Response()->json(['ecode' => 0, 'data' => ['id' => $id]]);
 
         //if ($operate_flg === '1')
         //{
@@ -188,16 +184,16 @@ class LabelsController extends Controller
             }
             $updValues['labels'] = array_values(array_unique(array_filter($newLabels)));
 
-            $updValues['modifier'] = [ 'id' => $this->user->id, 'name' => $this->user->first_name, 'email' => $this->user->email ];
+            $updValues['modifier'] = ['id' => $this->user->id, 'name' => $this->user->first_name, 'email' => $this->user->email];
             $updValues['updated_at'] = time();
 
             $issue_id = $issue['_id']->__toString();
 
             DB::collection('issue_' . $project_key)->where('_id', $issue_id)->update($updValues);
             // add to histroy table
-            $snap_id = Provider::snap2His($project_key, $issue_id, [], [ 'labels' ]);
+            $snap_id = Provider::snap2His($project_key, $issue_id, [], ['labels']);
             // trigger event of issue edited
-            Event::fire(new IssueEvent($project_key, $issue_id, $updValues['modifier'], [ 'event_key' => 'edit_issue', 'snap_id' => $snap_id ]));
+            Event::fire(new IssueEvent($project_key, $issue_id, $updValues['modifier'], ['event_key' => 'edit_issue', 'snap_id' => $snap_id]));
         }
     }
 }

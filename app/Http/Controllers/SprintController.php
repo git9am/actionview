@@ -1,24 +1,22 @@
 <?php
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Event;
-
-use App\Http\Requests;
+use App\Events\SprintEvent;
 use App\Http\Controllers\Controller;
+use App\Project\Eloquent\Board;
 use App\Project\Eloquent\Sprint;
 use App\Project\Eloquent\SprintDayLog;
-use App\Project\Eloquent\Board;
-use App\Project\Provider;
-use App\Events\SprintEvent;
+use App\Project\Eloquent\Worklog;
 use App\System\Eloquent\CalendarSingular;
 use DB;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Event;
 
 class SprintController extends Controller
 {
     public function __construct()
     {
-        $this->middleware('privilege:manage_project', [ 'except' => [ 'show', 'getLog' ] ]);
+        $this->middleware('privilege:manage_project', ['except' => ['show', 'getLog']]);
         parent::__construct();
     }
 
@@ -45,7 +43,7 @@ class SprintController extends Controller
             'no' => $sprint_count + 1,
             'name' => 'Sprint ' . ($sprint_count + 1),
             'status' => 'waiting',
-            'issues' => []
+            'issues' => [],
         ]);
         return Response()->json(['ecode' => 0, 'data' => $this->getValidSprintList($project_key)]);
     }
@@ -82,7 +80,7 @@ class SprintController extends Controller
             if ($src_sprint->status == 'completed') {
                 throw new \UnexpectedValueException('the moved issue cannot be moved into or moved out of the completed sprint', -11706);
             }
-            $src_sprint->fill([ 'issues' => array_values(array_diff($src_sprint->issues, [ $issue_no ]) ?: []) ])->save();
+            $src_sprint->fill(['issues' => array_values(array_diff($src_sprint->issues, [$issue_no]) ?: [])])->save();
 
             if ($src_sprint->status == 'active') {
                 $this->popSprint($project_key, $issue_no, $src_sprint_no);
@@ -97,14 +95,14 @@ class SprintController extends Controller
             if ($dest_sprint->status == 'completed') {
                 throw new \UnexpectedValueException('the moved issue cannot be moved into or moved out of the completed sprint', -11706);
             }
-            $dest_sprint->fill([ 'issues' => array_values(array_merge($dest_sprint->issues ?: [], [ $issue_no ])) ])->save();
+            $dest_sprint->fill(['issues' => array_values(array_merge($dest_sprint->issues ?: [], [$issue_no]))])->save();
 
             if ($dest_sprint->status == 'active') {
                 $this->pushSprint($project_key, $issue_no, $dest_sprint_no);
             }
         }
 
-        return Response()->json([ 'ecode' => 0, 'data' => $this->getValidSprintList($project_key) ]);
+        return Response()->json(['ecode' => 0, 'data' => $this->getValidSprintList($project_key)]);
     }
 
     /**
@@ -159,7 +157,7 @@ class SprintController extends Controller
             throw new \UnexpectedValueException('the sprint does not exist or is not in the project.', -11708);
         }
 
-        $updValues = [ 'status' => 'active' ];
+        $updValues = ['status' => 'active'];
 
         $start_time = $request->input('start_time');
         if (isset($start_time) && $start_time) {
@@ -202,10 +200,10 @@ class SprintController extends Controller
         }
 
         $isSendMsg = $request->input('isSendMsg') && true;
-        $user = [ 'id' => $this->user->id, 'name' => $this->user->first_name, 'email' => $this->user->email ];
-        Event::fire(new SprintEvent($project_key, $user, [ 'event_key' => 'start_sprint', 'isSendMsg' => $isSendMsg, 'data' => [ 'sprint_no' => $no ] ]));
+        $user = ['id' => $this->user->id, 'name' => $this->user->first_name, 'email' => $this->user->email];
+        Event::fire(new SprintEvent($project_key, $user, ['event_key' => 'start_sprint', 'isSendMsg' => $isSendMsg, 'data' => ['sprint_no' => $no]]));
 
-        return Response()->json([ 'ecode' => 0, 'data' => $this->getValidSprintList($project_key) ]);
+        return Response()->json(['ecode' => 0, 'data' => $this->getValidSprintList($project_key)]);
     }
 
     /**
@@ -241,7 +239,7 @@ class SprintController extends Controller
 
         $sprint->fill($updValues)->save();
 
-        return Response()->json([ 'ecode' => 0, 'data' => $this->getValidSprintList($project_key) ]);
+        return Response()->json(['ecode' => 0, 'data' => $this->getValidSprintList($project_key)]);
     }
 
     /**
@@ -274,7 +272,7 @@ class SprintController extends Controller
 
         $incompleted_issues = array_values(array_diff($sprint->issues, $completed_issues));
 
-        $valid_incompleted_issues = DB::collection('issue_' . $project_key)->whereIn('no', $incompleted_issues)->where('del_flg', '<>', 1)->get([ 'no' ]);
+        $valid_incompleted_issues = DB::collection('issue_' . $project_key)->whereIn('no', $incompleted_issues)->where('del_flg', '<>', 1)->get(['no'])->all();
         if ($valid_incompleted_issues) {
             $valid_incompleted_issues = array_column($valid_incompleted_issues, 'no');
             $incompleted_issues = array_values(array_intersect($incompleted_issues, $valid_incompleted_issues));
@@ -284,7 +282,7 @@ class SprintController extends Controller
             'status' => 'completed',
             'real_complete_time' => time(),
             'completed_issues' => $completed_issues,
-            'incompleted_issues' => $incompleted_issues
+            'incompleted_issues' => $incompleted_issues,
         ];
 
         $sprint->fill($updValues)->save();
@@ -294,15 +292,15 @@ class SprintController extends Controller
             if ($next_sprint) {
                 $issues = !isset($next_sprint->issues) || !$next_sprint->issues ? [] : $next_sprint->issues;
                 $issues = array_merge($incompleted_issues, $issues);
-                $next_sprint->fill([ 'issues' => $issues ])->save();
+                $next_sprint->fill(['issues' => $issues])->save();
             }
         }
 
         $isSendMsg = $request->input('isSendMsg') && true;
-        $user = [ 'id' => $this->user->id, 'name' => $this->user->first_name, 'email' => $this->user->email ];
-        Event::fire(new SprintEvent($project_key, $user, [ 'event_key' => 'complete_sprint', 'isSendMsg' => $isSendMsg, 'data' => [ 'sprint_no' => $no ] ]));
+        $user = ['id' => $this->user->id, 'name' => $this->user->first_name, 'email' => $this->user->email];
+        Event::fire(new SprintEvent($project_key, $user, ['event_key' => 'complete_sprint', 'isSendMsg' => $isSendMsg, 'data' => ['sprint_no' => $no]]));
 
-        return Response()->json([ 'ecode' => 0, 'data' => $this->getValidSprintList($project_key) ]);
+        return Response()->json(['ecode' => 0, 'data' => $this->getValidSprintList($project_key)]);
     }
 
     /**
@@ -332,7 +330,7 @@ class SprintController extends Controller
             if ($next_sprint) {
                 $issues = !isset($next_sprint->issues) || !$next_sprint->issues ? [] : $next_sprint->issues;
                 $issues = array_merge($sprint->issues, $issues);
-                $next_sprint->fill([ 'issues' => $issues ])->save();
+                $next_sprint->fill(['issues' => $issues])->save();
             }
         }
 
@@ -340,7 +338,7 @@ class SprintController extends Controller
 
         Sprint::where('project_key', $project_key)->where('no', '>', $no)->decrement('no');
 
-        return Response()->json([ 'ecode' => 0, 'data' => $this->getValidSprintList($project_key) ]);
+        return Response()->json(['ecode' => 0, 'data' => $this->getValidSprintList($project_key)]);
     }
 
     /**
@@ -352,7 +350,7 @@ class SprintController extends Controller
     public function getValidSprintList($project_key)
     {
         $sprints = Sprint::where('project_key', $project_key)
-            ->whereIn('status', [ 'active', 'waiting' ])
+            ->whereIn('status', ['active', 'waiting'])
             ->orderBy('no', 'asc')
             ->get();
 
@@ -408,17 +406,17 @@ class SprintController extends Controller
         if (isset($issue['sprints']) && $issue['sprints']) {
             $sprints = $issue['sprints'];
         }
-        $new_sprints = array_diff($sprints, [ $sprint_no ]);
+        $new_sprints = array_diff($sprints, [$sprint_no]);
 
         DB::collection('issue_' . $project_key)->where('no', $issue_no)->update(['sprints' => $new_sprints]);
     }
 
     /**
-      * get the last column state of the kanban.
-      *
-      * @param  string $kanban_id
-      * @return array
-      */
+     * get the last column state of the kanban.
+     *
+     * @param  string $kanban_id
+     * @return array
+     */
     public function getLastColumnStates($kanban_id)
     {
         // remaining start
@@ -435,13 +433,13 @@ class SprintController extends Controller
     }
 
     /**
-      * get sprint original state.
-      *
-      * @param  string $project_key
-      * @param  array  $issue_nos
-      * @param  string $kanban_id
-      * @return array
-      */
+     * get sprint original state.
+     *
+     * @param  string $project_key
+     * @param  array  $issue_nos
+     * @param  string $kanban_id
+     * @return array
+     */
     public function filterIssues($project_key, $issue_nos, $kanban_id)
     {
         // get the kanban last column states
@@ -451,8 +449,8 @@ class SprintController extends Controller
         $origin_issues = [];
 
         $issues = DB::collection('issue_' . $project_key)
-            ->where([ 'no' => [ '$in' => $issue_nos ] ])
-            ->where([ 'state' => [ '$nin' => $last_column_states ] ])
+            ->where(['no' => ['$in' => $issue_nos]])
+            ->where(['state' => ['$nin' => $last_column_states]])
             ->get();
         foreach ($issues as $issue) {
             $new_issue_nos[] = $issue['no'];
@@ -460,28 +458,28 @@ class SprintController extends Controller
             $origin_issues[] = [
                 'no' => $issue['no'],
                 'state' => isset($issue['state']) ? $issue['state'] : '',
-                'story_points' => isset($issue['story_points']) ? $issue['story_points'] : 0 ];
+                'story_points' => isset($issue['story_points']) ? $issue['story_points'] : 0];
         }
 
-        return [ 'issues' => $new_issue_nos, 'origin_issues' => $origin_issues ];
+        return ['issues' => $new_issue_nos, 'origin_issues' => $origin_issues];
     }
 
     /**
-      * get sprint original state.
-      *
-      * @param  string $project_key
-      * @param  array  $issue_nos
-      * @return array
-      */
+     * get sprint original state.
+     *
+     * @param  string $project_key
+     * @param  array  $issue_nos
+     * @return array
+     */
     public function getOriginIssues($project_key, $issue_nos)
     {
         $origin_issues = [];
-        $issues = DB::collection('issue_' . $project_key)->where([ 'no' => [ '$in' => $issue_nos ] ])->get();
+        $issues = DB::collection('issue_' . $project_key)->where(['no' => ['$in' => $issue_nos]])->get();
         foreach ($issues as $issue) {
             $origin_issues[] = [
                 'no' => $issue['no'],
                 'state' => isset($issue['state']) ? $issue['state'] : '',
-                'story_points' => isset($issue['story_points']) ? $issue['story_points'] : 0 ];
+                'story_points' => isset($issue['story_points']) ? $issue['story_points'] : 0];
         }
         return $origin_issues;
     }
@@ -529,17 +527,17 @@ class SprintController extends Controller
         // guideline start
         $issue_count_guideline = [];
         $story_points_guideline = [];
-        $issue_count_guideline[] = [ 'day' => '', 'value' => $origin_issue_count ];
-        $story_points_guideline[] = [ 'day' => '', 'value' => $origin_story_points ];
+        $issue_count_guideline[] = ['day' => '', 'value' => $origin_issue_count];
+        $story_points_guideline[] = ['day' => '', 'value' => $origin_story_points];
         $tmp_issue_count = $origin_issue_count;
         $tmp_story_points = $origin_story_points;
         foreach ($workingDays as $day => $flag) {
             if ($flag === 1) {
-                $tmp_issue_count = max([ round($tmp_issue_count - $origin_issue_count / $workingDayNum, 2), 0 ]);
-                $tmp_story_points = max([ round($tmp_story_points - $origin_story_points / $workingDayNum, 2), 0 ]);
+                $tmp_issue_count = max([round($tmp_issue_count - $origin_issue_count / $workingDayNum, 2), 0]);
+                $tmp_story_points = max([round($tmp_story_points - $origin_story_points / $workingDayNum, 2), 0]);
             }
-            $issue_count_guideline[] = [ 'day' => substr($day, 5), 'value' => $tmp_issue_count, 'notWorking' => ($flag + 1) % 2 ];
-            $story_points_guideline[] = [ 'day' => substr($day, 5), 'value' => $tmp_story_points, 'notWorking' => ($flag + 1) % 2 ];
+            $issue_count_guideline[] = ['day' => substr($day, 5), 'value' => $tmp_issue_count, 'notWorking' => ($flag + 1) % 2];
+            $story_points_guideline[] = ['day' => substr($day, 5), 'value' => $tmp_story_points, 'notWorking' => ($flag + 1) % 2];
         }
         // guideline end
 
@@ -553,8 +551,8 @@ class SprintController extends Controller
 
         $issue_count_remaining = [];
         $story_points_remaining = [];
-        $issue_count_remaining[] = [ 'day' => '', 'value' => $origin_issue_count ];
-        $story_points_remaining[] = [ 'day' => '', 'value' => $origin_story_points ];
+        $issue_count_remaining[] = ['day' => '', 'value' => $origin_issue_count];
+        $story_points_remaining[] = ['day' => '', 'value' => $origin_story_points];
         foreach ($sprint_day_log as $daylog) {
             $incompleted_issue_num = 0;
             $incompleted_story_points = 0;
@@ -565,12 +563,12 @@ class SprintController extends Controller
                     $incompleted_story_points += isset($issue['story_points']) ? $issue['story_points'] : 0;
                 }
             }
-            $issue_count_remaining[] = [ 'day' => substr($daylog->day, 5), 'value' => $incompleted_issue_num, 'notWorking' => isset($workingDays[$daylog->day]) ? ($workingDays[$daylog->day] + 1) % 2 : 0 ];
-            $story_points_remaining[] = [ 'day' => substr($daylog->day, 5), 'value' => $incompleted_story_points, 'notWorking' => isset($workingDays[$daylog->day]) ? ($workingDays[$daylog->day] + 1) % 2 : 0 ];
+            $issue_count_remaining[] = ['day' => substr($daylog->day, 5), 'value' => $incompleted_issue_num, 'notWorking' => isset($workingDays[$daylog->day]) ? ($workingDays[$daylog->day] + 1) % 2 : 0];
+            $story_points_remaining[] = ['day' => substr($daylog->day, 5), 'value' => $incompleted_story_points, 'notWorking' => isset($workingDays[$daylog->day]) ? ($workingDays[$daylog->day] + 1) % 2 : 0];
         }
         // remaining start
 
-        return Response()->json([ 'ecode' => 0, 'data' => [ 'issue_count' => [ 'guideline' => $issue_count_guideline, 'remaining' => $issue_count_remaining ], 'story_points' => [ 'guideline' => $story_points_guideline, 'remaining' => $story_points_remaining ] ] ]);
+        return Response()->json(['ecode' => 0, 'data' => ['issue_count' => ['guideline' => $issue_count_guideline, 'remaining' => $issue_count_remaining], 'story_points' => ['guideline' => $story_points_guideline, 'remaining' => $story_points_remaining]]]);
     }
 
     /**
@@ -594,7 +592,7 @@ class SprintController extends Controller
             $tmp_time += 24 * 60 * 60;
         }
 
-        $singulars = CalendarSingular::where([ 'date' => [ '$in' => $days ] ])->get();
+        $singulars = CalendarSingular::where(['date' => ['$in' => $days]])->get();
         foreach ($singulars as $singular) {
             $tmp = $singular->date;
             $workingDays[$tmp] = $singular->type == 'holiday' ? 0 : 1;
@@ -602,7 +600,7 @@ class SprintController extends Controller
         return $workingDays;
     }
 
-    public function t2m($val, $options)
+    public function t2m($val, $options = [])
     {
         $w2d = isset($options['w2d']) ? $options['w2d'] : 5;
         $d2h = isset($options['d2h']) ? $options['d2h'] : 8;

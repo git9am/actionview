@@ -2,24 +2,22 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Event;
-
-//use App\Events\ModuleEvent;
 use App\Events\IssueEvent;
-use App\Http\Requests;
 use App\Http\Controllers\Controller;
 
-use DB;
-use Sentinel;
-use App\Project\Provider;
+//use App\Events\ModuleEvent;
 use App\Project\Eloquent\Module;
+use App\Project\Provider;
+use DB;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Event;
+use Sentinel;
 
 class ModuleController extends Controller
 {
     public function __construct()
     {
-        $this->middleware('privilege:manage_project', [ 'except' => [ 'index' ] ]);
+        $this->middleware('privilege:manage_project', ['except' => ['index']]);
         parent::__construct();
     }
 
@@ -30,12 +28,12 @@ class ModuleController extends Controller
      */
     public function index($project_key)
     {
-        $modules = Module::whereRaw([ 'project_key' => $project_key ])->orderBy('sn', 'asc')->get();
+        $modules = Module::whereRaw(['project_key' => $project_key])->orderBy('sn', 'asc')->get();
         foreach ($modules as $module) {
             $module->is_used = $this->isFieldUsedByIssue($project_key, 'module', $module->toArray());
         }
         $users = Provider::getUserList($project_key);
-        return Response()->json([ 'ecode' => 0, 'data' => $modules, 'options' => [ 'users' => $users ] ]);
+        return Response()->json(['ecode' => 0, 'data' => $modules, 'options' => ['users' => $users]]);
     }
 
     /**
@@ -51,7 +49,7 @@ class ModuleController extends Controller
             throw new \UnexpectedValueException('the name can not be empty.', -11400);
         }
 
-        if (Module::whereRaw([ 'name' => $name ])->exists()) {
+        if (Module::whereRaw(['name' => $name])->exists()) {
             throw new \UnexpectedValueException('module name cannot be repeated', -11401);
         }
 
@@ -59,20 +57,20 @@ class ModuleController extends Controller
         $principal_id = $request->input('principal');
         if (isset($principal_id)) {
             $user_info = Sentinel::findById($principal_id);
-            $principal = [ 'id' => $principal_id, 'name' => $user_info->first_name ];
+            $principal = ['id' => $principal_id, 'name' => $user_info->first_name];
         }
 
-        $creator = [ 'id' => $this->user->id, 'name' => $this->user->first_name, 'email' => $this->user->email ];
+        $creator = ['id' => $this->user->id, 'name' => $this->user->first_name, 'email' => $this->user->email];
         $module = Module::create([
             'project_key' => $project_key,
             'principal' => $principal,
             'sn' => time(),
-            'creator' => $creator ] + $request->all());
+            'creator' => $creator] + $request->all());
 
         // trigger event of version added
         //Event::fire(new ModuleEvent($project_key, $creator, [ 'event_key' => 'create_module', 'data' => $module->name ]));
 
-        return Response()->json([ 'ecode' => 0, 'data' => $module ]);
+        return Response()->json(['ecode' => 0, 'data' => $module]);
     }
 
     /**
@@ -108,7 +106,7 @@ class ModuleController extends Controller
             if (!$name) {
                 throw new \UnexpectedValueException('the name can not be empty.', -11400);
             }
-            if ($module->name !== $name && Module::whereRaw([ 'name' => $name ])->exists()) {
+            if ($module->name !== $name && Module::whereRaw(['name' => $name])->exists()) {
                 throw new \UnexpectedValueException('module name cannot be repeated', -11401);
             }
         }
@@ -117,7 +115,7 @@ class ModuleController extends Controller
         if (isset($principal_id)) {
             if ($principal_id) {
                 $user_info = Sentinel::findById($principal_id);
-                $principal = [ 'id' => $principal_id, 'name' => $user_info->first_name ];
+                $principal = ['id' => $principal_id, 'name' => $user_info->first_name];
             } else {
                 $principal = [];
             }
@@ -125,13 +123,13 @@ class ModuleController extends Controller
             $principal = isset($module['principal']) ? $module['principal'] : [];
         }
 
-        $module->fill([ 'principal' => $principal ] + array_except($request->all(), [ 'creator', 'project_key' ]))->save();
+        $module->fill(['principal' => $principal] + array_except($request->all(), ['creator', 'project_key']))->save();
 
         // trigger event of module edited
         //$cur_user = [ 'id' => $this->user->id, 'name' => $this->user->first_name, 'email' => $this->user->email ];
         //Event::fire(new ModuleEvent($project_key, $cur_user, [ 'event_key' => 'edit_module', 'data' => $request->all() ]));
 
-        return Response()->json([ 'ecode' => 0, 'data' => Module::find($id) ]);
+        return Response()->json(['ecode' => 0, 'data' => Module::find($id)]);
     }
 
     /**
@@ -181,7 +179,7 @@ class ModuleController extends Controller
         if ($operate_flg === '1') {
             return $this->show($project_key, $request->input('swap_module'));
         } else {
-            return Response()->json(['ecode' => 0, 'data' => [ 'id' => $id ]]);
+            return Response()->json(['ecode' => 0, 'data' => ['id' => $id]]);
         }
     }
 
@@ -212,16 +210,16 @@ class ModuleController extends Controller
             }
 
             if ($updValues) {
-                $updValues['modifier'] = [ 'id' => $this->user->id, 'name' => $this->user->first_name, 'email' => $this->user->email ];
+                $updValues['modifier'] = ['id' => $this->user->id, 'name' => $this->user->first_name, 'email' => $this->user->email];
                 $updValues['updated_at'] = time();
 
                 $issue_id = $issue['_id']->__toString();
 
                 DB::collection('issue_' . $project_key)->where('_id', $issue_id)->update($updValues);
                 // add to histroy table
-                $snap_id = Provider::snap2His($project_key, $issue_id, [], [ 'module' ]);
+                $snap_id = Provider::snap2His($project_key, $issue_id, [], ['module']);
                 // trigger event of issue edited
-                Event::fire(new IssueEvent($project_key, $issue_id, $updValues['modifier'], [ 'event_key' => 'edit_issue', 'snap_id' => $snap_id ]));
+                Event::fire(new IssueEvent($project_key, $issue_id, $updValues['modifier'], ['event_key' => 'edit_issue', 'snap_id' => $snap_id]));
             }
         }
     }
@@ -248,6 +246,6 @@ class ModuleController extends Controller
             }
         }
 
-        return Response()->json(['ecode' => 0, 'data' => [ 'sequence' => $sequence_modules ] ]);
+        return Response()->json(['ecode' => 0, 'data' => ['sequence' => $sequence_modules]]);
     }
 }

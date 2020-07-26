@@ -2,24 +2,20 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Event;
-use App\Events\VersionEvent;
 use App\Events\IssueEvent;
-
-use App\Http\Requests;
+use App\Events\VersionEvent;
 use App\Http\Controllers\Controller;
 use App\Project\Eloquent\Version;
 use App\Project\Provider;
-use App\Customization\Eloquent\Field;
-
 use DB;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Event;
 
 class VersionController extends Controller
 {
     public function __construct()
     {
-        $this->middleware('privilege:manage_project', [ 'except' => [ 'index' ] ]);
+        $this->middleware('privilege:manage_project', ['except' => ['index']]);
         parent::__construct();
     }
 
@@ -62,9 +58,9 @@ class VersionController extends Controller
             $version->is_used = $this->isFieldUsedByIssue($project_key, 'version', $version->toArray(), $version_fields);
         }
 
-        $options = [ 'total' => $total, 'sizePerPage' => $page_size, 'current_time' => time() ];
+        $options = ['total' => $total, 'sizePerPage' => $page_size, 'current_time' => time()];
 
-        return Response()->json([ 'ecode' => 0, 'data' => $versions, 'options' => $options ]);
+        return Response()->json(['ecode' => 0, 'data' => $versions, 'options' => $options]);
     }
 
     /**
@@ -79,7 +75,7 @@ class VersionController extends Controller
         $fields = Provider::getFieldList($project_key)->toArray();
         foreach ($fields as $field) {
             if ($field['type'] === 'SingleVersion' || $field['type'] === 'MultiVersion') {
-                $version_fields[] = [ 'type' => $field['type'], 'key' => $field['key'] ];
+                $version_fields[] = ['type' => $field['type'], 'key' => $field['key']];
             }
         }
         return $version_fields;
@@ -98,7 +94,7 @@ class VersionController extends Controller
             throw new \UnexpectedValueException('the name can not be empty.', -11500);
         }
 
-        if (Version::whereRaw([ 'name' => $name, 'project_key' => $project_key ])->exists()) {
+        if (Version::whereRaw(['name' => $name, 'project_key' => $project_key])->exists()) {
             throw new \UnexpectedValueException('version name cannot be repeated', -11501);
         }
 
@@ -106,13 +102,13 @@ class VersionController extends Controller
             throw new \UnexpectedValueException('start-time must less then end-time', -11502);
         }
 
-        $creator = [ 'id' => $this->user->id, 'name' => $this->user->first_name, 'email' => $this->user->email ];
-        $version = Version::create([ 'project_key' => $project_key, 'creator' => $creator, 'status' => 'unreleased' ] + $request->all());
+        $creator = ['id' => $this->user->id, 'name' => $this->user->first_name, 'email' => $this->user->email];
+        $version = Version::create(['project_key' => $project_key, 'creator' => $creator, 'status' => 'unreleased'] + $request->all());
 
         // trigger event of version added
-        Event::fire(new VersionEvent($project_key, $creator, [ 'event_key' => 'create_version', 'data' => $version->toArray() ]));
+        Event::fire(new VersionEvent($project_key, $creator, ['event_key' => 'create_version', 'data' => $version->toArray()]));
 
-        return Response()->json([ 'ecode' => 0, 'data' => $version ]);
+        return Response()->json(['ecode' => 0, 'data' => $version]);
     }
 
     /**
@@ -185,8 +181,8 @@ class VersionController extends Controller
 
         if ($status === 'released') {
             $isSendMsg = $request->input('isSendMsg') && true;
-            $cur_user = [ 'id' => $this->user->id, 'name' => $this->user->first_name, 'email' => $this->user->email ];
-            Event::fire(new VersionEvent($project_key, $cur_user, [ 'event_key' => 'release_version', 'isSendMsg' => $isSendMsg, 'data' => Version::find($id)->toArray() ]));
+            $cur_user = ['id' => $this->user->id, 'name' => $this->user->first_name, 'email' => $this->user->email];
+            Event::fire(new VersionEvent($project_key, $cur_user, ['event_key' => 'release_version', 'isSendMsg' => $isSendMsg, 'data' => Version::find($id)->toArray()]));
         }
 
         return $this->show($project_key, $id);
@@ -212,7 +208,7 @@ class VersionController extends Controller
                 throw new \UnexpectedValueException('the name can not be empty.', -11500);
             }
 
-            if ($version->name !== $name && Version::whereRaw([ 'name' => $name, 'project_key' => $project_key ])->exists()) {
+            if ($version->name !== $name && Version::whereRaw(['name' => $name, 'project_key' => $project_key])->exists()) {
                 throw new \UnexpectedValueException('version name cannot be repeated', -11501);
             }
         }
@@ -224,17 +220,17 @@ class VersionController extends Controller
         }
 
         $updValues = [];
-        $updValues = array_only($request->all(), [ 'name', 'start_time', 'end_time', 'description', 'status' ]);
+        $updValues = array_only($request->all(), ['name', 'start_time', 'end_time', 'description', 'status']);
         if (!$updValues) {
             return $this->show($project_key, $id);
         }
 
-        $updValues['modifier'] = [ 'id' => $this->user->id, 'name' => $this->user->first_name, 'email' => $this->user->email ];
+        $updValues['modifier'] = ['id' => $this->user->id, 'name' => $this->user->first_name, 'email' => $this->user->email];
         $updValues['updated_at'] = time();
 
         $version->fill($updValues)->save();
 
-        Event::fire(new VersionEvent($project_key, $updValues['modifier'], [ 'event_key' => 'edit_version', 'data' => Version::find($id)->toArray() ]));
+        Event::fire(new VersionEvent($project_key, $updValues['modifier'], ['event_key' => 'edit_version', 'data' => Version::find($id)->toArray()]));
 
         return $this->show($project_key, $id);
     }
@@ -272,8 +268,8 @@ class VersionController extends Controller
         Version::destroy($source);
 
         // trigger event of version edited
-        $cur_user = [ 'id' => $this->user->id, 'name' => $this->user->first_name, 'email' => $this->user->email ];
-        Event::fire(new VersionEvent($project_key, $cur_user, [ 'event_key' => 'merge_version', 'data' => [ 'source' => $source_version->toArray(), 'dest' => $dest_version->toArray() ] ]));
+        $cur_user = ['id' => $this->user->id, 'name' => $this->user->first_name, 'email' => $this->user->email];
+        Event::fire(new VersionEvent($project_key, $cur_user, ['event_key' => 'merge_version', 'data' => ['source' => $source_version->toArray(), 'dest' => $dest_version->toArray()]]));
 
         return $this->show($project_key, $dest);
     }
@@ -294,16 +290,16 @@ class VersionController extends Controller
             ->get();
         foreach ($issues as $issue) {
             $updValues['resolve_version'] = $dest;
-            $updValues['modifier'] = [ 'id' => $this->user->id, 'name' => $this->user->first_name, 'email' => $this->user->email ];
+            $updValues['modifier'] = ['id' => $this->user->id, 'name' => $this->user->first_name, 'email' => $this->user->email];
             $updValues['updated_at'] = time();
 
             $issue_id = $issue['_id']->__toString();
 
             DB::collection('issue_' . $project_key)->where('_id', $issue_id)->update($updValues);
             // add to histroy table
-            $snap_id = Provider::snap2His($project_key, $issue_id, [], [ 'resolve_version' ]);
+            $snap_id = Provider::snap2His($project_key, $issue_id, [], ['resolve_version']);
             // trigger event of issue edited
-            Event::fire(new IssueEvent($project_key, $issue_id, $updValues['modifier'], [ 'event_key' => 'edit_issue', 'snap_id' => $snap_id ]));
+            Event::fire(new IssueEvent($project_key, $issue_id, $updValues['modifier'], ['event_key' => 'edit_issue', 'snap_id' => $snap_id]));
         }
     }
 
@@ -345,7 +341,7 @@ class VersionController extends Controller
             if ($updValues) {
                 $updFields = array_keys($updValues);
 
-                $updValues['modifier'] = [ 'id' => $this->user->id, 'name' => $this->user->first_name, 'email' => $this->user->email ];
+                $updValues['modifier'] = ['id' => $this->user->id, 'name' => $this->user->first_name, 'email' => $this->user->email];
                 $updValues['updated_at'] = time();
 
                 $issue_id = $issue['_id']->__toString();
@@ -354,7 +350,7 @@ class VersionController extends Controller
                 // add to histroy table
                 $snap_id = Provider::snap2His($project_key, $issue_id, [], $updFields);
                 // trigger event of issue edited
-                Event::fire(new IssueEvent($project_key, $issue_id, $updValues['modifier'], [ 'event_key' => 'edit_issue', 'snap_id' => $snap_id ]));
+                Event::fire(new IssueEvent($project_key, $issue_id, $updValues['modifier'], ['event_key' => 'edit_issue', 'snap_id' => $snap_id]));
             }
         }
     }
@@ -402,13 +398,13 @@ class VersionController extends Controller
         Version::destroy($id);
 
         // trigger event of version edited
-        $cur_user = [ 'id' => $this->user->id, 'name' => $this->user->first_name, 'email' => $this->user->email ];
-        Event::fire(new VersionEvent($project_key, $cur_user, [ 'event_key' => 'del_version', 'data' => $version->toArray() ]));
+        $cur_user = ['id' => $this->user->id, 'name' => $this->user->first_name, 'email' => $this->user->email];
+        Event::fire(new VersionEvent($project_key, $cur_user, ['event_key' => 'del_version', 'data' => $version->toArray()]));
 
         if ($operate_flg === '1') {
             return $this->show($project_key, $request->input('swap_version'));
         } else {
-            return Response()->json(['ecode' => 0, 'data' => [ 'id' => $id ]]);
+            return Response()->json(['ecode' => 0, 'data' => ['id' => $id]]);
         }
     }
 }

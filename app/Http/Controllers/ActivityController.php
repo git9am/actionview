@@ -2,13 +2,9 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
-
-use App\Http\Requests;
 use App\Http\Controllers\Controller;
-use App\Project\Provider;
 use DB;
-
+use Illuminate\Http\Request;
 use Sentinel;
 
 class ActivityController extends Controller
@@ -34,7 +30,7 @@ class ActivityController extends Controller
             $query = $query->where('_id', '<', $offset_id);
         }
 
-        $query->whereRaw([ 'issue_id' => [ '$exists' => 1 ] ]);
+        $query->whereRaw(['issue_id' => ['$exists' => 1]]);
 
         $query->orderBy('_id', 'desc');
 
@@ -60,12 +56,12 @@ class ActivityController extends Controller
                 } else {
                     $issue = DB::collection('issue_' . $project_key)->where('_id', $activity['issue_id'])->first();
                 }
-                $activities[$key]['issue_link'][ 'src'] = [
+                $activities[$key]['issue_link']['src'] = [
                     'id' => $activity['issue_id'],
                     'no' => $issue['no'],
                     'title' => isset($issue['title']) ? $issue['title'] : '',
                     'state' => isset($issue['state']) ? $issue['state'] : '',
-                    'del_flg' => isset($issue['del_flg']) ? $issue['del_flg'] : 0 ];
+                    'del_flg' => isset($issue['del_flg']) ? $issue['del_flg'] : 0];
 
                 $activities[$key]['issue_link']['relation'] = $activity['data']['relation'];
 
@@ -79,7 +75,7 @@ class ActivityController extends Controller
                     'no' => $issue['no'],
                     'title' => isset($issue['title']) ? $issue['title'] : '',
                     'state' => isset($issue['state']) ? $issue['state'] : '',
-                    'del_flg' => isset($issue['del_flg']) ? $issue['del_flg'] : 0 ];
+                    'del_flg' => isset($issue['del_flg']) ? $issue['del_flg'] : 0];
             } elseif (isset($activity['issue_id'])) {
                 if (isset($cache_issues[$activity['issue_id']])) {
                     $issue = $cache_issues[$activity['issue_id']];
@@ -91,10 +87,10 @@ class ActivityController extends Controller
                     'no' => $issue['no'],
                     'title' => isset($issue['title']) ? $issue['title'] : '',
                     'state' => isset($issue['state']) ? $issue['state'] : '',
-                    'del_flg' => isset($issue['del_flg']) ? $issue['del_flg'] : 0 ];
+                    'del_flg' => isset($issue['del_flg']) ? $issue['del_flg'] : 0];
                 $cache_issues[$activity['issue_id']] = $issue;
             }
         }
-        return Response()->json([ 'ecode' => 0, 'data' => parent::arrange($activities), 'options' => [ 'current_time' => time() ] ]);
+        return Response()->json(['ecode' => 0, 'data' => parent::arrange($activities), 'options' => ['current_time' => time()]]);
     }
 }

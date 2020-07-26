@@ -2,23 +2,20 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Event;
-
 use App\Events\IssueEvent;
-use App\Http\Requests;
 use App\Http\Controllers\Controller;
-use App\Customization\Eloquent\State;
-use App\Project\Eloquent\Epic;
 use App\Project\Eloquent\Board;
+use App\Project\Eloquent\Epic;
 use App\Project\Provider;
 use DB;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Event;
 
 class EpicController extends Controller
 {
     public function __construct()
     {
-        $this->middleware('privilege:manage_project', [ 'except' => [ 'index' ] ]);
+        $this->middleware('privilege:manage_project', ['except' => ['index']]);
         parent::__construct();
     }
 
@@ -41,7 +38,7 @@ class EpicController extends Controller
         $last_column = array_pop($columns);
         $completed_states = isset($last_column['states']) ? $last_column['states'] : [];
 
-        $epics = Epic::where([ 'project_key' => $project_key ])->orderBy('sn', 'asc')->get();
+        $epics = Epic::where(['project_key' => $project_key])->orderBy('sn', 'asc')->get();
         foreach ($epics as $epic) {
             $epic->is_used = $this->isFieldUsedByIssue($project_key, 'epic', $epic->toArray());
 
@@ -64,8 +61,8 @@ class EpicController extends Controller
             $epic->incompleted = $incompleted_issue_cnt;
             $epic->inestimable = $inestimable_issue_cnt;
         }
-            
-        return Response()->json([ 'ecode' => 0, 'data' => $epics, 'options' => [ 'completed_states' => $completed_states, 'incompleted_states' => array_diff($all_states, $completed_states) ] ]);
+
+        return Response()->json(['ecode' => 0, 'data' => $epics, 'options' => ['completed_states' => $completed_states, 'incompleted_states' => array_diff($all_states, $completed_states)]]);
     }
 
     /**
@@ -90,7 +87,7 @@ class EpicController extends Controller
             throw new \UnexpectedValueException('epic name cannot be repeated', -11802);
         }
 
-        $epic = Epic::create([ 'project_key' => $project_key, 'sn' => time() ] + $request->all());
+        $epic = Epic::create(['project_key' => $project_key, 'sn' => time()] + $request->all());
         return Response()->json(['ecode' => 0, 'data' => $epic]);
     }
 
@@ -167,7 +164,7 @@ class EpicController extends Controller
             }
         }
 
-        return Response()->json(['ecode' => 0, 'data' => [ 'sequence' => $sequence_epics ]]);
+        return Response()->json(['ecode' => 0, 'data' => ['sequence' => $sequence_epics]]);
     }
 
     /**
@@ -210,7 +207,7 @@ class EpicController extends Controller
 
         Epic::destroy($id);
 
-        return Response()->json(['ecode' => 0, 'data' => [ 'id' => $id ]]);
+        return Response()->json(['ecode' => 0, 'data' => ['id' => $id]]);
 
         //if ($operate_flg === '1')
         //{
@@ -241,16 +238,16 @@ class EpicController extends Controller
             $updValues = [];
             $updValues['epic'] = $dest;
 
-            $updValues['modifier'] = [ 'id' => $this->user->id, 'name' => $this->user->first_name, 'email' => $this->user->email ];
+            $updValues['modifier'] = ['id' => $this->user->id, 'name' => $this->user->first_name, 'email' => $this->user->email];
             $updValues['updated_at'] = time();
 
             $issue_id = $issue['_id']->__toString();
 
             DB::collection('issue_' . $project_key)->where('_id', $issue_id)->update($updValues);
             // add to histroy table
-            $snap_id = Provider::snap2His($project_key, $issue_id, [], [ 'epic' ]);
+            $snap_id = Provider::snap2His($project_key, $issue_id, [], ['epic']);
             // trigger event of issue edited
-            Event::fire(new IssueEvent($project_key, $issue_id, $updValues['modifier'], [ 'event_key' => 'edit_issue', 'snap_id' => $snap_id ]));
+            Event::fire(new IssueEvent($project_key, $issue_id, $updValues['modifier'], ['event_key' => 'edit_issue', 'snap_id' => $snap_id]));
         }
     }
 }

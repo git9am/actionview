@@ -2,15 +2,9 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Event;
-
-use App\Http\Requests;
 use App\Http\Controllers\Controller;
-
-use Sentinel;
-use DB;
 use App\Project\Provider;
+use DB;
 
 class SummaryController extends Controller
 {
@@ -56,7 +50,7 @@ class SummaryController extends Controller
         $t = strtotime('-2 week');
         while ($t <= time()) {
             $ymd = date('Y/m/d', $t);
-            $trend[$ymd] = [ 'new' => 0, 'resolved' => 0, 'closed' => 0 ];
+            $trend[$ymd] = ['new' => 0, 'resolved' => 0, 'closed' => 0];
             $t += 24 * 3600;
         }
 
@@ -68,7 +62,7 @@ class SummaryController extends Controller
                     ->orWhere('closed_at', '>=', $twoWeeksAgo);
             })
             ->where('del_flg', '<>', 1)
-            ->get([ 'created_at', 'resolved_at', 'closed_at' ]);
+            ->get(['created_at', 'resolved_at', 'closed_at']);
 
         foreach ($issues as $issue) {
             if (isset($issue['created_at']) && $issue['created_at']) {
@@ -94,7 +88,7 @@ class SummaryController extends Controller
 
         $new_trend = [];
         foreach ($trend as $key => $val) {
-            $new_trend[] = [ 'day' => $key ] + $val;
+            $new_trend[] = ['day' => $key] + $val;
         }
         return $new_trend;
     }
@@ -112,7 +106,7 @@ class SummaryController extends Controller
         $trend = $this->getPulseData($project_key);
 
         $types = Provider::getTypeList($project_key);
-        
+
         $optPriorities = [];
         $priorities = Provider::getPriorityList($project_key);
         foreach ($priorities as $priority) {
@@ -134,9 +128,9 @@ class SummaryController extends Controller
         $issues = DB::collection('issue_' . $project_key)
             ->where('created_at', '>=', strtotime(date('Ymd', strtotime('-1 week'))))
             ->where('del_flg', '<>', 1)
-            ->get([ 'type' ]);
+            ->get(['type']);
 
-        $new_issues = [ 'total' => 0 ];
+        $new_issues = ['total' => 0];
         foreach ($issues as $issue) {
             if (!isset($new_issues[$issue['type']])) {
                 $new_issues[$issue['type']] = 0;
@@ -149,9 +143,9 @@ class SummaryController extends Controller
             ->where('state', 'Closed')
             ->where('updated_at', '>=', strtotime(date('Ymd', strtotime('-1 week'))))
             ->where('del_flg', '<>', 1)
-            ->get([ 'type' ]);
+            ->get(['type']);
 
-        $closed_issues = [ 'total' => 0 ];
+        $closed_issues = ['total' => 0];
         foreach ($issues as $issue) {
             if (!isset($closed_issues[$issue['type']])) {
                 $closed_issues[$issue['type']] = 0;
@@ -170,14 +164,14 @@ class SummaryController extends Controller
             }
             $closed_percent = 100 - $new_percent;
         }
-        
+
         $new_issues['percent'] = $new_percent;
         $closed_issues['percent'] = $closed_percent;
 
         $issues = DB::collection('issue_' . $project_key)
             ->where('resolution', 'Unresolved')
             ->where('del_flg', '<>', 1)
-            ->get([ 'priority', 'assignee', 'type', 'module' ]);
+            ->get(['priority', 'assignee', 'type', 'module']);
 
         $users = [];
         $assignee_unresolved_issues = [];
@@ -232,7 +226,7 @@ class SummaryController extends Controller
         foreach ($issues as $issue) {
             $module_ids = [];
             if (!isset($issue['module']) || !$issue['module']) {
-                $module_ids = [ '-1' ];
+                $module_ids = ['-1'];
             } else {
                 $ms = is_string($issue['module']) ? explode(',', $issue['module']) : $issue['module'];
                 foreach ($ms as $m) {
@@ -277,14 +271,14 @@ class SummaryController extends Controller
                 'closed_issues' => $closed_issues,
                 'assignee_unresolved_issues' => $assignee_unresolved_issues,
                 'priority_unresolved_issues' => $sorted_priority_unresolved_issues,
-                'module_unresolved_issues' => $sorted_module_unresolved_issues ],
+                'module_unresolved_issues' => $sorted_module_unresolved_issues],
             'options' => [
                 'types' => $types,
                 'users' => $users,
                 'priorities' => $optPriorities,
                 'modules' => $optModules,
-                'twoWeeksAgo' => date('m/d', strtotime('-2 week'))
-            ]
+                'twoWeeksAgo' => date('m/d', strtotime('-2 week')),
+            ],
         ]);
     }
 

@@ -10,7 +10,7 @@ trait TimeTrackTrait
      * check the timetracking.
      *
      * @return bool
-    */
+     */
     public function ttCheck($ttString)
     {
         $ttString = strtolower(trim($ttString));
@@ -63,7 +63,7 @@ trait TimeTrackTrait
                 continue;
             }
             $lastChr = substr($ttValue, -1);
-            $ttNum   = substr($ttValue, 0, -1) === '' ? 1 : substr($ttValue, 0, -1);
+            $ttNum = substr($ttValue, 0, -1) === '' ? 1 : substr($ttValue, 0, -1);
             if ($lastChr == 'w') {
                 $tt_in_min += $ttNum * $W2M;
             } elseif ($lastChr == 'd') {
@@ -76,7 +76,7 @@ trait TimeTrackTrait
         }
         return $tt_in_min;
     }
-    
+
     /**
      * handle the timetracking.
      *
@@ -87,7 +87,7 @@ trait TimeTrackTrait
         if (!$ttString) {
             return '';
         }
-        
+
         $W2D = 5;
         $D2H = 8;
         $setting = SysSetting::first();
@@ -110,7 +110,7 @@ trait TimeTrackTrait
                 continue;
             }
             $lastChr = substr($ttValue, -1);
-            $ttNum   = substr($ttValue, 0, -1) === '' ? 1 : abs(substr($ttValue, 0, -1));
+            $ttNum = substr($ttValue, 0, -1) === '' ? 1 : abs(substr($ttValue, 0, -1));
             if ($lastChr == 'w') {
                 $tt_in_min += $ttNum * $W2M;
             } elseif ($lastChr == 'd') {

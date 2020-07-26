@@ -1,14 +1,9 @@
 <?php
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
-
-use App\Http\Requests;
 use App\Http\Controllers\Controller;
 use App\Project\Eloquent\ExternalUsers;
-use App\Project\Eloquent\Project;
-use App\Project\Provider;
-use DB;
+use Illuminate\Http\Request;
 
 class ExternalUsersController extends Controller
 {
@@ -43,7 +38,7 @@ class ExternalUsersController extends Controller
         if (!isset($mode) || !$mode) {
             throw new \UnexpectedValueException('the mode cannot be empty.', -16001);
         }
-        if (!in_array($mode, [ 'use', 'resetPwd', 'enable', 'disable' ])) {
+        if (!in_array($mode, ['use', 'resetPwd', 'enable', 'disable'])) {
             throw new \UnexpectedValueException('the mode value has error.', -16002);
         }
         $data['status'] = $mode == 'disable' ? 'disabled' : 'enabled';

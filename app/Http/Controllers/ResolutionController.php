@@ -2,17 +2,13 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Event;
-
-//use App\Events\ResolutionConfigChangeEvent;
-use App\Http\Requests;
-use App\Http\Controllers\Controller;
 use App\Customization\Eloquent\Resolution;
 use App\Customization\Eloquent\ResolutionProperty;
+use App\Http\Controllers\Controller;
 use App\Project\Eloquent\Project;
 use App\Project\Provider;
 use DB;
+use Illuminate\Http\Request;
 
 class ResolutionController extends Controller
 {
@@ -47,7 +43,7 @@ class ResolutionController extends Controller
             throw new \UnexpectedValueException('resolution name cannot be repeated', -12501);
         }
 
-        $resolution = Resolution::create([ 'project_key' => $project_key, 'sn' => time() ] + $request->all());
+        $resolution = Resolution::create(['project_key' => $project_key, 'sn' => time()] + $request->all());
         // trigger to change resolution field config
         //Event::fire(new ResolutionConfigChangeEvent($project_key));
         return Response()->json(['ecode' => 0, 'data' => $resolution]);
@@ -116,7 +112,7 @@ class ResolutionController extends Controller
             throw new \UnexpectedValueException('the resolution does not exist or is not in the project.', -12502);
         }
 
-        if (isset($resolution->key) && in_array($resolution->key, [ 'Unresolved', 'Fixed' ])) {
+        if (isset($resolution->key) && in_array($resolution->key, ['Unresolved', 'Fixed'])) {
             throw new \UnexpectedValueException('the resolution is built in the system.', -12504);
         }
 
@@ -194,10 +190,10 @@ class ResolutionController extends Controller
             $resolution_property->fill($properties);
             $resolution_property->save();
         } else {
-            ResolutionProperty::create([ 'project_key' => $project_key ] + $properties);
+            ResolutionProperty::create(['project_key' => $project_key] + $properties);
         }
 
-        return Response()->json(['ecode' => 0, 'data' => [ 'sequence' => $sequence ?: null, 'default' => $defaultValue ?: null ]]);
+        return Response()->json(['ecode' => 0, 'data' => ['sequence' => $sequence ?: null, 'default' => $defaultValue ?: null]]);
     }
 
     /**
@@ -241,7 +237,7 @@ class ResolutionController extends Controller
             }
         }
 
-        return Response()->json(['ecode' => 0, 'data' => [ 'sequence' => $sequence ?: null, 'default' => $default_resolution_id ?: null ]]);
+        return Response()->json(['ecode' => 0, 'data' => ['sequence' => $sequence ?: null, 'default' => $default_resolution_id ?: null]]);
     }
 
     /**
@@ -252,7 +248,7 @@ class ResolutionController extends Controller
     public function viewUsedInProject($project_key, $id)
     {
         if ($project_key !== '$_sys_$') {
-            return Response()->json(['ecode' => 0, 'data' => [] ]);
+            return Response()->json(['ecode' => 0, 'data' => []]);
         }
 
         $res = [];
@@ -263,10 +259,10 @@ class ResolutionController extends Controller
                 ->where('del_flg', '<>', 1)
                 ->count();
             if ($count > 0) {
-                $res[] = [ 'key' => $project->key, 'name' => $project->name, 'status' => $project->status, 'issue_count' => $count ];
+                $res[] = ['key' => $project->key, 'name' => $project->name, 'status' => $project->status, 'issue_count' => $count];
             }
         }
 
-        return Response()->json(['ecode' => 0, 'data' => $res ]);
+        return Response()->json(['ecode' => 0, 'data' => $res]);
     }
 }

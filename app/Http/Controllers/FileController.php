@@ -1,15 +1,14 @@
 <?php
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Event;
-
+use App\Events\FileDelEvent;
+use App\Events\FileUploadEvent;
 use App\Http\Controllers\Controller;
 use App\Project\Eloquent\File;
-use App\Events\FileUploadEvent;
-use App\Events\FileDelEvent;
 use App\Utils\File as FileUtil;
 use DB;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Event;
 
 class FileController extends Controller
 {
@@ -44,11 +43,11 @@ class FileController extends Controller
         $filename = '/tmp/' . $basename;
         move_uploaded_file($_FILES[$field]['tmp_name'], $filename);
         $data = [];
-        $data['name']    = $_FILES[$field]['name'];
-        $data['size']    = $_FILES[$field]['size'];
-        $data['type']    = $_FILES[$field]['type'];
-        $data['index']   = $basename;
-        if (in_array($_FILES[$field]['type'], [ 'image/jpeg', 'image/jpg', 'image/png', 'image/gif' ])) {
+        $data['name'] = $_FILES[$field]['name'];
+        $data['size'] = $_FILES[$field]['size'];
+        $data['type'] = $_FILES[$field]['type'];
+        $data['index'] = $basename;
+        if (in_array($_FILES[$field]['type'], ['image/jpeg', 'image/jpg', 'image/png', 'image/gif'])) {
             $size = getimagesize($filename);
             $width = $size[0];
             $height = $size[1];
@@ -82,7 +81,7 @@ class FileController extends Controller
         }
         // move original file
         @rename($filename, $sub_save_path . $basename);
-        $data['uploader'] = [ 'id' => $this->user->id, 'name' => $this->user->first_name, 'email' => $this->user->email ];
+        $data['uploader'] = ['id' => $this->user->id, 'name' => $this->user->first_name, 'email' => $this->user->email];
         $file = File::create($data);
 
         $issue_id = $request->input('issue_id');
@@ -90,7 +89,7 @@ class FileController extends Controller
             Event::fire(new FileUploadEvent($project_key, $issue_id, $field, $file->id, $data['uploader']));
         }
 
-        return Response()->json([ 'ecode' => 0, 'data' => [ 'field' => $field, 'file' => File::find($file->id), 'filename' => '/actionview/api/project/' . $project_key . '/file/' . $file->id ] ]);
+        return Response()->json(['ecode' => 0, 'data' => ['field' => $field, 'file' => File::find($file->id), 'filename' => '/actionview/api/project/' . $project_key . '/file/' . $file->id]]);
     }
 
     /**
@@ -179,13 +178,13 @@ class FileController extends Controller
         $issue_id = $request->input('issue_id');
         $field_key = $request->input('field_key');
         if (isset($issue_id) && $issue_id && isset($field_key) && $field_key) {
-            $user = [ 'id' => $this->user->id, 'name' => $this->user->first_name, 'email' => $this->user->email ];
+            $user = ['id' => $this->user->id, 'name' => $this->user->first_name, 'email' => $this->user->email];
             Event::fire(new FileDelEvent($project_key, $issue_id, $field_key, $id, $user));
         }
 
         // logically deleted
         if ($file) {
-            $file->fill([ 'del_flg' => 1 ])->save();
+            $file->fill(['del_flg' => 1])->save();
         }
 
         $issue = DB::collection('issue_' . $project_key)->where('_id', $issue_id)->first();
@@ -220,9 +219,9 @@ class FileController extends Controller
 
         // move original file
         @rename($filename, $sub_save_path . $basename);
-        $data['uploader'] = [ 'id' => $this->user->id, 'name' => $this->user->first_name, 'email' => $this->user->email ];
+        $data['uploader'] = ['id' => $this->user->id, 'name' => $this->user->first_name, 'email' => $this->user->email];
         $file = File::create($data);
 
-        return Response()->json([ 'ecode' => 0, 'data' => [ 'fid' => $basename, 'fname' => $_FILES['file']['name'] ] ]);
+        return Response()->json(['ecode' => 0, 'data' => ['fid' => $basename, 'fname' => $_FILES['file']['name']]]);
     }
 }

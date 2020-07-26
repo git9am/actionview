@@ -2,25 +2,21 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Event;
-
-use App\Events\AddUserToRoleEvent;
-use App\Events\DelUserFromRoleEvent;
-use App\Events\AddGroupToRoleEvent;
-use App\Events\DelGroupFromRoleEvent;
-
-use App\Project\Eloquent\Project;
-use App\Project\Provider;
-use App\Http\Requests;
-use App\Http\Controllers\Controller;
+use App\Acl\Acl;
 use App\Acl\Eloquent\Group;
 use App\Acl\Eloquent\Role;
-use App\Acl\Eloquent\RolePermissions;
 use App\Acl\Eloquent\Roleactor;
-use App\Acl\Acl;
-
+use App\Acl\Eloquent\RolePermissions;
+use App\Events\AddGroupToRoleEvent;
+use App\Events\AddUserToRoleEvent;
+use App\Events\DelGroupFromRoleEvent;
+use App\Events\DelUserFromRoleEvent;
+use App\Http\Controllers\Controller;
+use App\Project\Eloquent\Project;
+use App\Project\Provider;
 use Cartalyst\Sentinel\Users\EloquentUser;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Event;
 
 class RoleController extends Controller
 {
@@ -53,7 +49,7 @@ class RoleController extends Controller
 
             $roles[$key]['permissions'] = $this->getPermissions($project_key, $role['_id']);
         }
-        return Response()->json([ 'ecode' => 0, 'data' => $roles ]);
+        return Response()->json(['ecode' => 0, 'data' => $roles]);
     }
 
     /**
@@ -77,14 +73,14 @@ class RoleController extends Controller
             }
         }
 
-        $role = Role::create($request->all() + [ 'project_key' => $project_key ]);
+        $role = Role::create($request->all() + ['project_key' => $project_key]);
 
         if (isset($permissions) && $role) {
-            RolePermissions::create([ 'project_key' => $project_key, 'role_id' => $role->id, 'permissions' => $permissions ]);
+            RolePermissions::create(['project_key' => $project_key, 'role_id' => $role->id, 'permissions' => $permissions]);
             $role->permissions = $permissions;
         }
 
-        return Response()->json([ 'ecode' => 0, 'data' => $role ]);
+        return Response()->json(['ecode' => 0, 'data' => $role]);
     }
 
     /**
@@ -96,7 +92,7 @@ class RoleController extends Controller
     public function show($project_key, $id)
     {
         $role = Role::find($id);
-        return Response()->json([ 'ecode' => 0, 'data' => $role ]);
+        return Response()->json(['ecode' => 0, 'data' => $role]);
     }
 
     /**
@@ -110,7 +106,7 @@ class RoleController extends Controller
     {
         $new_user_ids = $request->input('users');
         if (isset($new_user_ids)) {
-            $actor = Roleactor::where([ 'project_key' => $project_key, 'role_id' => $id ])->first();
+            $actor = Roleactor::where(['project_key' => $project_key, 'role_id' => $id])->first();
             $old_user_ids = $actor && $actor->user_ids ? $actor->user_ids : [];
 
             $this->setUsers($project_key, $id, $new_user_ids ?: []);
@@ -127,7 +123,7 @@ class RoleController extends Controller
         $data->users = $user_groups['users'];
         $data->groups = $user_groups['groups'];
 
-        return Response()->json([ 'ecode' => 0, 'data' => $data ]);
+        return Response()->json(['ecode' => 0, 'data' => $data]);
     }
 
     /**
@@ -141,7 +137,7 @@ class RoleController extends Controller
     {
         $new_group_ids = $request->input('groups');
         if (isset($new_group_ids)) {
-            $actor = Roleactor::where([ 'project_key' => $project_key, 'role_id' => $id ])->first();
+            $actor = Roleactor::where(['project_key' => $project_key, 'role_id' => $id])->first();
             $old_group_ids = $actor && $actor->group_ids ? $actor->group_ids : [];
 
             $this->setGroups($project_key, $id, $new_group_ids ?: []);
@@ -158,7 +154,7 @@ class RoleController extends Controller
         $data->users = $user_groups['users'];
         $data->groups = $user_groups['groups'];
 
-        return Response()->json([ 'ecode' => 0, 'data' => $data ]);
+        return Response()->json(['ecode' => 0, 'data' => $data]);
     }
 
     /**
@@ -192,7 +188,7 @@ class RoleController extends Controller
         $role->fill($request->except(['project_key']))->save();
 
         $data = Role::find($id);
-        return Response()->json([ 'ecode' => 0, 'data' => $data ]);
+        return Response()->json(['ecode' => 0, 'data' => $data]);
     }
 
     /**
@@ -219,7 +215,7 @@ class RoleController extends Controller
                 $actor->delete();
             }
         } else {
-            $actor = Roleactor::where([ 'project_key' => $project_key, 'role_id' => $id ])->first();
+            $actor = Roleactor::where(['project_key' => $project_key, 'role_id' => $id])->first();
             if ($actor) {
                 $user_ids = isset($actor->user_ids) ? $actor->user_ids : [];
                 $user_ids && Event::fire(new DelUserFromRoleEvent($user_ids, $project_key));
@@ -230,7 +226,7 @@ class RoleController extends Controller
         }
         Role::destroy($id);
 
-        return Response()->json([ 'ecode' => 0, 'data' => [ 'id' => $id ] ]);
+        return Response()->json(['ecode' => 0, 'data' => ['id' => $id]]);
     }
 
     /**
@@ -242,10 +238,10 @@ class RoleController extends Controller
      */
     public function setUsers($project_key, $role_id, $uids)
     {
-        $actor = Roleactor::where([ 'project_key' => $project_key, 'role_id' => $role_id ])->first();
+        $actor = Roleactor::where(['project_key' => $project_key, 'role_id' => $role_id])->first();
         $actor && $actor->delete();
-        
-        Roleactor::create([ 'role_id' => $role_id, 'project_key' => $project_key, 'user_ids' => $uids, 'group_ids' => isset($actor->group_ids) ? $actor->group_ids : [] ]);
+
+        Roleactor::create(['role_id' => $role_id, 'project_key' => $project_key, 'user_ids' => $uids, 'group_ids' => isset($actor->group_ids) ? $actor->group_ids : []]);
     }
 
     /**
@@ -257,10 +253,10 @@ class RoleController extends Controller
      */
     public function setGroups($project_key, $role_id, $gids)
     {
-        $actor = Roleactor::where([ 'project_key' => $project_key, 'role_id' => $role_id ])->first();
+        $actor = Roleactor::where(['project_key' => $project_key, 'role_id' => $role_id])->first();
         $actor && $actor->delete();
 
-        Roleactor::create([ 'role_id' => $role_id, 'project_key' => $project_key, 'group_ids' => $gids, 'user_ids' => isset($actor->user_ids) ? $actor->user_ids : [] ]);
+        Roleactor::create(['role_id' => $role_id, 'project_key' => $project_key, 'group_ids' => $gids, 'user_ids' => isset($actor->user_ids) ? $actor->user_ids : []]);
     }
 
     /**
@@ -272,16 +268,16 @@ class RoleController extends Controller
      */
     public function getGroupsAndUsers($project_key, $role_id)
     {
-        $actor = Roleactor::where([ 'project_key' => $project_key, 'role_id' => $role_id ])->first();
+        $actor = Roleactor::where(['project_key' => $project_key, 'role_id' => $role_id])->first();
         if (!$actor) {
-            return [ 'users' => [], 'groups' => [] ];
+            return ['users' => [], 'groups' => []];
         }
 
         $new_users = [];
         if (isset($actor->user_ids) && $actor->user_ids) {
             $users = EloquentUser::find($actor->user_ids);
             foreach ($users as $user) {
-                $new_users[] = [ 'id' => $user->id, 'name' => $user->first_name, 'email' => $user->email, 'nameAndEmail' => $user->first_name . '('. $user->email . ')' ];
+                $new_users[] = ['id' => $user->id, 'name' => $user->first_name, 'email' => $user->email, 'nameAndEmail' => $user->first_name . '(' . $user->email . ')'];
             }
         }
 
@@ -290,7 +286,7 @@ class RoleController extends Controller
             $new_groups = Group::find($actor->group_ids)->toArray();
         }
 
-        return [ 'users' => $new_users, 'groups' => $new_groups ];
+        return ['users' => $new_users, 'groups' => $new_groups];
     }
 
     /**
@@ -314,10 +310,10 @@ class RoleController extends Controller
                 throw new \UnexpectedValueException('the illegal permission.', -12701);
             }
 
-            $rp = RolePermissions::where([ 'project_key' => $project_key, 'role_id' => $id ])->first();
+            $rp = RolePermissions::where(['project_key' => $project_key, 'role_id' => $id])->first();
             $rp && $rp->delete();
 
-            RolePermissions::create([ 'project_key' => $project_key, 'role_id' => $id, 'permissions' => $permissions ]);
+            RolePermissions::create(['project_key' => $project_key, 'role_id' => $id, 'permissions' => $permissions]);
         }
 
         $role->permissions = $this->getPermissions($project_key, $id);
@@ -333,9 +329,9 @@ class RoleController extends Controller
      */
     public function getPermissions($project_key, $role_id)
     {
-        $rp = RolePermissions::where([ 'project_key' => $project_key, 'role_id' => $role_id ])->first();
+        $rp = RolePermissions::where(['project_key' => $project_key, 'role_id' => $role_id])->first();
         if (!$rp && $project_key !== '$_sys_$') {
-            $rp = RolePermissions::where([ 'project_key' => '$_sys_$', 'role_id' => $role_id ])->first();
+            $rp = RolePermissions::where(['project_key' => '$_sys_$', 'role_id' => $role_id])->first();
         }
         return $rp && isset($rp->permissions) ? $rp->permissions : [];
     }
@@ -349,12 +345,12 @@ class RoleController extends Controller
      */
     public function reset($project_key, $role_id)
     {
-        $rp = RolePermissions::where([ 'project_key' => $project_key, 'role_id' => $role_id ])->first();
+        $rp = RolePermissions::where(['project_key' => $project_key, 'role_id' => $role_id])->first();
         $rp && $rp->delete();
 
         $role = Role::find($role_id)->toArray();
 
-        $rp = RolePermissions::where([ 'project_key' => '$_sys_$', 'role_id' => $role_id ])->first();
+        $rp = RolePermissions::where(['project_key' => '$_sys_$', 'role_id' => $role_id])->first();
         $role['permissions'] = $rp && isset($rp->permissions) ? $rp->permissions : [];
 
         return Response()->json(['ecode' => 0, 'data' => $role]);
@@ -368,7 +364,7 @@ class RoleController extends Controller
     public function viewUsedInProject($project_key, $id)
     {
         if ($project_key !== '$_sys_$') {
-            return Response()->json(['ecode' => 0, 'data' => [] ]);
+            return Response()->json(['ecode' => 0, 'data' => []]);
         }
 
         $res = [];
@@ -380,10 +376,10 @@ class RoleController extends Controller
                 ->first();
 
             if ($roleactor && ($roleactor->user_ids || $roleactor->group_ids)) {
-                $res[] = [ 'key' => $project->key, 'name' => $project->name, 'status' => $project->status ];
+                $res[] = ['key' => $project->key, 'name' => $project->name, 'status' => $project->status];
             }
         }
 
-        return Response()->json(['ecode' => 0, 'data' => $res ]);
+        return Response()->json(['ecode' => 0, 'data' => $res]);
     }
 }

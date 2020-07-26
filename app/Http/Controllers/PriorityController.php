@@ -2,17 +2,13 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Event;
-
-//use App\Events\PriorityConfigChangeEvent;
-use App\Http\Requests;
-use App\Http\Controllers\Controller;
 use App\Customization\Eloquent\Priority;
 use App\Customization\Eloquent\PriorityProperty;
+use App\Http\Controllers\Controller;
 use App\Project\Eloquent\Project;
 use App\Project\Provider;
 use DB;
+use Illuminate\Http\Request;
 
 class PriorityController extends Controller
 {
@@ -47,7 +43,7 @@ class PriorityController extends Controller
             throw new \UnexpectedValueException('priority name cannot be repeated', -12601);
         }
 
-        $priority = Priority::create([ 'project_key' => $project_key, 'sn' => time() ] + $request->all());
+        $priority = Priority::create(['project_key' => $project_key, 'sn' => time()] + $request->all());
         // trigger to change priority field config
         // Event::fire(new PriorityConfigChangeEvent($project_key));
         return Response()->json(['ecode' => 0, 'data' => $priority]);
@@ -195,10 +191,10 @@ class PriorityController extends Controller
             $priority_property->fill($properties);
             $priority_property->save();
         } else {
-            PriorityProperty::create([ 'project_key' => $project_key ] + $properties);
+            PriorityProperty::create(['project_key' => $project_key] + $properties);
         }
 
-        return Response()->json(['ecode' => 0, 'data' => [ 'sequence' => $sequence ?: null, 'default' => $defaultValue ?: null ]]);
+        return Response()->json(['ecode' => 0, 'data' => ['sequence' => $sequence ?: null, 'default' => $defaultValue ?: null]]);
     }
 
     /**
@@ -242,7 +238,7 @@ class PriorityController extends Controller
             }
         }
 
-        return Response()->json(['ecode' => 0, 'data' => [ 'sequence' => $sequence ?: null, 'default' => $default_priority_id ?: null ]]);
+        return Response()->json(['ecode' => 0, 'data' => ['sequence' => $sequence ?: null, 'default' => $default_priority_id ?: null]]);
     }
 
     /**
@@ -253,7 +249,7 @@ class PriorityController extends Controller
     public function viewUsedInProject($project_key, $id)
     {
         if ($project_key !== '$_sys_$') {
-            return Response()->json(['ecode' => 0, 'data' => [] ]);
+            return Response()->json(['ecode' => 0, 'data' => []]);
         }
 
         $res = [];
@@ -264,10 +260,10 @@ class PriorityController extends Controller
                 ->where('del_flg', '<>', 1)
                 ->count();
             if ($count > 0) {
-                $res[] = [ 'key' => $project->key, 'name' => $project->name, 'status' => $project->status, 'issue_count' => $count ];
+                $res[] = ['key' => $project->key, 'name' => $project->name, 'status' => $project->status, 'issue_count' => $count];
             }
         }
 
-        return Response()->json(['ecode' => 0, 'data' => $res ]);
+        return Response()->json(['ecode' => 0, 'data' => $res]);
     }
 }

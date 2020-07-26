@@ -1,11 +1,9 @@
 <?php
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
-use App\Http\Requests;
 use App\Http\Controllers\Controller;
-
 use App\System\Eloquent\UserSetting;
+use Illuminate\Http\Request;
 use Sentinel;
 
 class MysettingController extends Controller
@@ -71,7 +69,7 @@ class MysettingController extends Controller
         if (!$user) {
             throw new \UnexpectedValueException('the user is not existed.', -15000);
         }
-        $user->fill([ 'avatar' => $basename ])->save();
+        $user->fill(['avatar' => $basename])->save();
 
         return $this->show();
     }
@@ -95,14 +93,14 @@ class MysettingController extends Controller
         if ($user_setting && isset($user_setting->notifications)) {
             $data['notifications'] = $user_setting->notifications;
         } else {
-            $data['notifications'] = [ 'mail_notify' => true ];
+            $data['notifications'] = ['mail_notify' => true];
         }
 
         if ($user_setting && isset($user_setting->favorites)) {
             $data['favorites'] = $user_setting->favorites;
         }
 
-        return Response()->json([ 'ecode' => 0, 'data' => $data ]);
+        return Response()->json(['ecode' => 0, 'data' => $data]);
     }
 
     /**
@@ -123,7 +121,7 @@ class MysettingController extends Controller
             throw new \UnexpectedValueException('the user is not existed.', -15000);
         }
 
-        $credentials = [ 'email' => $this->user->email, 'password' => $password ];
+        $credentials = ['email' => $this->user->email, 'password' => $password];
         $valid = Sentinel::validateCredentials($user, $credentials);
         if (!$valid) {
             throw new \UnexpectedValueException('the old password is not correct.', -15002);
@@ -134,14 +132,14 @@ class MysettingController extends Controller
             throw new \UnexpectedValueException('the password can not be empty.', -15003);
         }
 
-        $valid = Sentinel::validForUpdate($user, [ 'password' => $new_password ]);
+        $valid = Sentinel::validForUpdate($user, ['password' => $new_password]);
         if (!$valid) {
             throw new \UnexpectedValueException('resetting the password fails.', -15004);
         }
         //$user->password = password_hash($new_password, PASSWORD_DEFAULT);
-        Sentinel::update($user, [ 'password' => $new_password ]);
+        Sentinel::update($user, ['password' => $new_password]);
 
-        return Response()->json([ 'ecode' => 0, 'data' => [ 'accounts' => $user ] ]);
+        return Response()->json(['ecode' => 0, 'data' => ['accounts' => $user]]);
     }
 
     /**
@@ -180,9 +178,9 @@ class MysettingController extends Controller
             $user->bind_email = $bind_email;
         }
 
-        $user = Sentinel::update($user, [ 'id' => $this->user->id ]);
+        $user = Sentinel::update($user, ['id' => $this->user->id]);
 
-        return Response()->json([ 'ecode' => 0, 'data' => [ 'accounts' => $user ] ]);
+        return Response()->json(['ecode' => 0, 'data' => ['accounts' => $user]]);
     }
 
     /**
@@ -202,14 +200,14 @@ class MysettingController extends Controller
                 $new_notifications[$key] = $value;
             }
 
-            $user_setting->fill([ 'notifications' => $new_notifications ])->save();
+            $user_setting->fill(['notifications' => $new_notifications])->save();
         } else {
-            UserSetting::create([ 'user_id' => $this->user->id, 'notifications' => $notifications ]);
+            UserSetting::create(['user_id' => $this->user->id, 'notifications' => $notifications]);
         }
 
         $notifications = UserSetting::where('user_id', $this->user->id)->first()->notifications;
 
-        return Response()->json([ 'ecode' => 0, 'data' => [ 'notifications' => $notifications ] ]);
+        return Response()->json(['ecode' => 0, 'data' => ['notifications' => $notifications]]);
     }
 
     /**
@@ -222,20 +220,20 @@ class MysettingController extends Controller
     {
         $favorites = $request->all();
 
-        $user_setting = UserSetting::where(user_id, $this->user->id)->first();
+        $user_setting = UserSetting::where('user_id', $this->user->id)->first();
         if ($user_setting) {
             $new_favorites = $user_setting->favorites;
             foreach ($favorites as $key => $value) {
                 $new_favorites[$key] = $value;
             }
 
-            $user_setting->fill([ 'favorites' => $new_favorites ])->save();
+            $user_setting->fill(['favorites' => $new_favorites])->save();
         } else {
-            UserSetting::create([ 'user_id' => $this->user->id, 'favorites' => $favorites ]);
+            UserSetting::create(['user_id' => $this->user->id, 'favorites' => $favorites]);
         }
 
-        $favorites = UserSetting::where(user_id, $this->user->id)->first()->favorites;
+        $favorites = UserSetting::where('user_id', $this->user->id)->first()->favorites;
 
-        return Response()->json([ 'ecode' => 0, 'data' => [ 'favorites' => $favorites ] ]);
+        return Response()->json(['ecode' => 0, 'data' => ['favorites' => $favorites]]);
     }
 }

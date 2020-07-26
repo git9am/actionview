@@ -2,15 +2,12 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Event;
-
 use App\Events\IssueEvent;
-use App\Http\Requests;
 use App\Http\Controllers\Controller;
 use App\Project\Eloquent\Linked;
-
 use DB;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Event;
 
 class LinkController extends Controller
 {
@@ -48,10 +45,10 @@ class LinkController extends Controller
         }
         $values['dest'] = $dest;
 
-        $values['creator'] = [ 'id' => $this->user->id, 'name' => $this->user->first_name, 'email' => $this->user->email ];
+        $values['creator'] = ['id' => $this->user->id, 'name' => $this->user->first_name, 'email' => $this->user->email];
 
-        $isExists = Linked::whereRaw([ 'src' => $src, 'dest' => $dest ])->exists();
-        if ($isExists || Linked::whereRaw([ 'dest' => $src, 'src' => $dest ])->exists()) {
+        $isExists = Linked::whereRaw(['src' => $src, 'dest' => $dest])->exists();
+        if ($isExists || Linked::whereRaw(['dest' => $src, 'src' => $dest])->exists()) {
             throw new \UnexpectedValueException('the relation of two issues has been exists.', -11154);
         }
 
@@ -68,9 +65,9 @@ class LinkController extends Controller
         $link['dest'] = array_only($dest_issue, ['_id', 'no', 'type', 'title', 'state']);
 
         // trigger event of issue linked
-        Event::fire(new IssueEvent($project_key, $src, $values['creator'], [ 'event_key' => 'create_link', 'data' => [ 'dest' => $dest, 'relation' => $relation ]]));
+        Event::fire(new IssueEvent($project_key, $src, $values['creator'], ['event_key' => 'create_link', 'data' => ['dest' => $dest, 'relation' => $relation]]));
 
-        return Response()->json([ 'ecode' => 0, 'data' => parent::arrange($link) ]);
+        return Response()->json(['ecode' => 0, 'data' => parent::arrange($link)]);
     }
 
     /**
@@ -88,8 +85,8 @@ class LinkController extends Controller
 
         Linked::destroy($id);
         // trigger event of issue created
-        $user = [ 'id' => $this->user->id, 'name' => $this->user->first_name, 'email' => $this->user->email ];
-        Event::fire(new IssueEvent($project_key, $link->src, $user, [ 'event_key' => 'del_link', 'data' => [ 'dest' => $link->dest, 'relation' => $link->relation ]]));
+        $user = ['id' => $this->user->id, 'name' => $this->user->first_name, 'email' => $this->user->email];
+        Event::fire(new IssueEvent($project_key, $link->src, $user, ['event_key' => 'del_link', 'data' => ['dest' => $link->dest, 'relation' => $link->relation]]));
 
         return Response()->json(['ecode' => 0, 'data' => ['id' => $id]]);
     }

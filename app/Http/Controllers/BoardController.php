@@ -2,25 +2,21 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Event;
-
-use App\Http\Requests;
 use App\Http\Controllers\Controller;
-
+use App\Project\Eloquent\AccessBoardLog;
 use App\Project\Eloquent\Board;
 use App\Project\Eloquent\BoardRankMap;
-use App\Project\Eloquent\AccessBoardLog;
-use App\Project\Eloquent\Sprint;
 use App\Project\Eloquent\Epic;
+use App\Project\Eloquent\Sprint;
 use App\Project\Eloquent\Version;
 use App\Project\Provider;
+use Illuminate\Http\Request;
 
 class BoardController extends Controller
 {
     public function __construct()
     {
-        $this->middleware('privilege:manage_project', [ 'only' => [ 'store', 'update', 'destroy' ] ]);
+        $this->middleware('privilege:manage_project', ['only' => ['store', 'update', 'destroy']]);
         parent::__construct();
     }
 
@@ -63,7 +59,7 @@ class BoardController extends Controller
         }
 
         $sprints = Sprint::where('project_key', $project_key)
-            ->whereIn('status', [ 'active', 'waiting' ])
+            ->whereIn('status', ['active', 'waiting'])
             ->orderBy('no', 'asc')
             ->get();
         // compatible with old data
@@ -85,28 +81,28 @@ class BoardController extends Controller
             ->where('status', 'completed')
             ->max('no');
 
-        return Response()->json([ 'ecode' => 0, 'data' => $list, 'options' => [ 'epics' => $epics, 'sprints' => $sprints, 'versions' => $versions, 'completed_sprint_num' => $completed_sprint_num ] ]);
+        return Response()->json(['ecode' => 0, 'data' => $list, 'options' => ['epics' => $epics, 'sprints' => $sprints, 'versions' => $versions, 'completed_sprint_num' => $completed_sprint_num]]);
 
         /*
-        $example = [
-          'id' => '111',
-          'name' => '1111111111',
-          'type' => 'kanban',
-          'query' => [ 'type' => [ '59af4ad51d41c85e9108a8a7' ], 'subtask' => true ],
-          'last_access_time' => 11111111,
-          'columns' => [
-            [ 'no' => 1, 'name' => '待处理', 'states' => [ 'Open', 'Reopened' ] ],
-            [ 'no' => 2, 'name' => '处理中', 'states' => [ 'In Progess' ] ],
-            [ 'no' => 3, 'name' => '关闭', 'states' => [ 'Resolved', 'Closed' ] ]
-          ],
-          'filters' => [
-            [ 'no' => 1, 'id' => '11111', 'name' => '111111', 'query' => [ 'updated_at' => '1m' ] ],
-            [ 'no' => 2, 'id' => '22222', 'name' => '222222' ],
-            [ 'no' => 3, 'id' => '33333', 'name' => '333333' ],
-          ],
-        ];
-                return Response()->json([ 'ecode' => 0, 'data' => [ $example ] ]);
-        */
+    $example = [
+    'id' => '111',
+    'name' => '1111111111',
+    'type' => 'kanban',
+    'query' => [ 'type' => [ '59af4ad51d41c85e9108a8a7' ], 'subtask' => true ],
+    'last_access_time' => 11111111,
+    'columns' => [
+    [ 'no' => 1, 'name' => '待处理', 'states' => [ 'Open', 'Reopened' ] ],
+    [ 'no' => 2, 'name' => '处理中', 'states' => [ 'In Progess' ] ],
+    [ 'no' => 3, 'name' => '关闭', 'states' => [ 'Resolved', 'Closed' ] ]
+    ],
+    'filters' => [
+    [ 'no' => 1, 'id' => '11111', 'name' => '111111', 'query' => [ 'updated_at' => '1m' ] ],
+    [ 'no' => 2, 'id' => '22222', 'name' => '222222' ],
+    [ 'no' => 3, 'id' => '33333', 'name' => '333333' ],
+    ],
+    ];
+    return Response()->json([ 'ecode' => 0, 'data' => [ $example ] ]);
+     */
     }
 
     /**
@@ -128,9 +124,9 @@ class BoardController extends Controller
         }
 
         $columns = [
-            [ 'no' => 1, 'name' => '开始', 'states' => [] ],
-            [ 'no' => 2, 'name' => '处理中', 'states' => [] ],
-            [ 'no' => 3, 'name' => '完成', 'states' => [] ],
+            ['no' => 1, 'name' => '开始', 'states' => []],
+            ['no' => 2, 'name' => '处理中', 'states' => []],
+            ['no' => 3, 'name' => '完成', 'states' => []],
         ];
         $states = Provider::getStateOptions($project_key);
         foreach ($states as $state) {
@@ -147,8 +143,8 @@ class BoardController extends Controller
         // only support for kanban type, fix me
         $board = Board::create([
             'project_key' => $project_key,
-            'query' => [ 'subtask' => true ],
-            'columns' => $columns ] + $request->all());
+            'query' => ['subtask' => true],
+            'columns' => $columns] + $request->all());
 
         return Response()->json(['ecode' => 0, 'data' => $board]);
     }
@@ -184,7 +180,7 @@ class BoardController extends Controller
         $query = $request->input('query');
         if (isset($query)) {
             // defaultly display subtask issue
-            $updValues['query'] = [ 'subtask' => true ] + $query;
+            $updValues['query'] = ['subtask' => true] + $query;
         }
 
         $filters = $request->input('filters');
@@ -248,7 +244,7 @@ class BoardController extends Controller
             throw new \UnexpectedValueException('the ranked position can not be empty.', -11604);
         }
 
-        $rankmap = BoardRankMap::where([ 'board_id' => $id ])->first();
+        $rankmap = BoardRankMap::where(['board_id' => $id])->first();
         if (!$rankmap || !isset($rankmap->rank)) {
             throw new \UnexpectedValueException('the rank list is not exist.', -11605);
         }
@@ -259,7 +255,7 @@ class BoardController extends Controller
             throw new \UnexpectedValueException('the issue is not found in the rank list.', -11606);
         }
 
-        $blocks = [ $current ];
+        $blocks = [$current];
         $subtasks = Provider::getChildrenByParentNo($project_key, $current);
         if ($subtasks) {
             $rankedSubtasks = array_intersect($rank, $subtasks);
@@ -305,13 +301,13 @@ class BoardController extends Controller
             }
         }
 
-        $old_rank = BoardRankMap::where([ 'board_id' => $id ])->first();
+        $old_rank = BoardRankMap::where(['board_id' => $id])->first();
         $old_rank && $old_rank->delete();
 
-        BoardRankMap::create([ 'board_id' => $id, 'rank' => $rank ]);
+        BoardRankMap::create(['board_id' => $id, 'rank' => $rank]);
 
-        $rankmap = BoardRankMap::where([ 'board_id' => $id ])->first();
-        return Response()->json([ 'ecode' => 0, 'data' => $rankmap ]);
+        $rankmap = BoardRankMap::where(['board_id' => $id])->first();
+        return Response()->json(['ecode' => 0, 'data' => $rankmap]);
     }
 
     /**
@@ -323,15 +319,15 @@ class BoardController extends Controller
      */
     public function recordAccess($project_key, $id)
     {
-        $record = AccessBoardLog::where([ 'board_id' => $id, 'user_id' => $this->user->id ])->first();
+        $record = AccessBoardLog::where(['board_id' => $id, 'user_id' => $this->user->id])->first();
         $record && $record->delete();
 
         AccessBoardLog::create([
-          'project_key' => $project_key,
-          'user_id' => $this->user->id,
-          'board_id' => $id,
-          'latest_access_time' => time() ]);
-        return Response()->json(['ecode' => 0, 'data' => [ 'id' => $id ] ]);
+            'project_key' => $project_key,
+            'user_id' => $this->user->id,
+            'board_id' => $id,
+            'latest_access_time' => time()]);
+        return Response()->json(['ecode' => 0, 'data' => ['id' => $id]]);
     }
 
     /**

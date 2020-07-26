@@ -2,34 +2,27 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Schema;
-use Illuminate\Support\Facades\Event;
-use App\Events\IssueEvent;
-
-use App\Http\Requests;
-use App\Http\Controllers\Controller;
-use App\Project\Eloquent\Project;
-use App\Project\Eloquent\UserGroupProject;
-use App\Project\Eloquent\AccessProjectLog;
-use App\Customization\Eloquent\Type;
 use App\Acl\Acl;
-use App\Project\Provider;
-
+use App\Customization\Eloquent\Type;
 use App\Events\AddUserToRoleEvent;
 use App\Events\DelUserFromRoleEvent;
+use App\Http\Controllers\Controller;
+use App\Project\Eloquent\AccessProjectLog;
+use App\Project\Eloquent\Project;
+use App\Project\Eloquent\UserGroupProject;
 use App\System\Eloquent\SysSetting;
-use Sentinel;
 use DB;
-
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\Schema;
 use MongoDB\BSON\ObjectID;
-use MongoDB\Model\CollectionInfo;
+use Sentinel;
 
 class ProjectController extends Controller
 {
     public function __construct()
     {
-        $this->middleware('privilege:sys_admin', [ 'only' => [ 'index', 'getOptions', 'updMultiStatus', 'createMultiIndex', 'destroy' ] ]);
+        $this->middleware('privilege:sys_admin', ['only' => ['index', 'getOptions', 'updMultiStatus', 'createMultiIndex', 'destroy']]);
         parent::__construct();
     }
 
@@ -42,7 +35,7 @@ class ProjectController extends Controller
     {
         // get bound groups
         $group_ids = array_column(Acl::getBoundGroups($this->user->id), 'id');
-        $user_projects = UserGroupProject::whereIn('ug_id', array_merge($group_ids, [ $this->user->id ]))
+        $user_projects = UserGroupProject::whereIn('ug_id', array_merge($group_ids, [$this->user->id]))
             ->where('link_count', '>', 0)
             ->get(['project_key'])
             ->toArray();
@@ -64,13 +57,13 @@ class ProjectController extends Controller
                 continue;
             }
 
-            $projects[] = [ 'key' => $project->key, 'name' => $project->name ];
+            $projects[] = ['key' => $project->key, 'name' => $project->name];
             if (count($projects) >= 5) {
                 break;
             }
         }
 
-        return  Response()->json([ 'ecode' => 0, 'data' => $projects ]);
+        return Response()->json(['ecode' => 0, 'data' => $projects]);
     }
 
     /**
@@ -83,7 +76,7 @@ class ProjectController extends Controller
         // get bound groups
         $group_ids = array_column(Acl::getBoundGroups($this->user->id), 'id');
         // fix me
-        $user_projects = UserGroupProject::whereIn('ug_id', array_merge($group_ids, [ $this->user->id ]))
+        $user_projects = UserGroupProject::whereIn('ug_id', array_merge($group_ids, [$this->user->id]))
             ->where('link_count', '>', 0)
             ->orderBy('created_at', 'asc')
             ->get(['project_key'])
@@ -136,7 +129,7 @@ class ProjectController extends Controller
                 break;
             }
         }
-        
+
         foreach ($projects as $key => $project) {
             $projects[$key]['principal']['nameAndEmail'] = $project['principal']['name'] . '(' . $project['principal']['email'] . ')';
         }
@@ -144,7 +137,7 @@ class ProjectController extends Controller
         $syssetting = SysSetting::first();
         $allow_create_project = isset($syssetting->properties['allow_create_project']) ? $syssetting->properties['allow_create_project'] : 0;
 
-        return Response()->json([ 'ecode' => 0, 'data' => $projects, 'options' => [ 'limit' => $limit, 'allow_create_project' => $allow_create_project ] ]);
+        return Response()->json(['ecode' => 0, 'data' => $projects, 'options' => ['limit' => $limit, 'allow_create_project' => $allow_create_project]]);
     }
 
     /**
@@ -154,7 +147,7 @@ class ProjectController extends Controller
      */
     public function getOptions(Request $request)
     {
-        $principals = Project::distinct('principal')->get([ 'principal' ])->toArray();
+        $principals = Project::distinct('principal')->get(['principal'])->toArray();
 
         $newPrincipals = [];
         foreach ($principals as $principal) {
@@ -165,7 +158,7 @@ class ProjectController extends Controller
             $newPrincipals[] = $tmp;
         }
 
-        return Response()->json([ 'ecode' => 0, 'data' => [ 'principals' => $newPrincipals ] ]);
+        return Response()->json(['ecode' => 0, 'data' => ['principals' => $newPrincipals]]);
     }
 
     /**
@@ -215,7 +208,7 @@ class ProjectController extends Controller
             $col->index('parent');
         });
 
-        return Response()->json([ 'ecode' => 0, 'data' => $project ]);
+        return Response()->json(['ecode' => 0, 'data' => $project]);
     }
 
     /**
@@ -267,7 +260,7 @@ class ProjectController extends Controller
                 $col->index('parent');
             });
         }
-        return Response()->json([ 'ecode' => 0, 'data' => [ 'ids' => $ids ] ]);
+        return Response()->json(['ecode' => 0, 'data' => ['ids' => $ids]]);
     }
 
     /**
@@ -292,9 +285,9 @@ class ProjectController extends Controller
             $newIds[] = new ObjectID($id);
         }
 
-        Project::whereRaw([ '_id' => [ '$in' => $newIds ] ])->update([ 'status' => $status ]);
+        Project::whereRaw(['_id' => ['$in' => $newIds]])->update(['status' => $status]);
 
-        return Response()->json([ 'ecode' => 0, 'data' => [ 'ids' => $ids ] ]);
+        return Response()->json(['ecode' => 0, 'data' => ['ids' => $ids]]);
     }
 
     /**
@@ -313,9 +306,9 @@ class ProjectController extends Controller
             });
         }
 
-        $projects = $query->take(10)->get([ 'name', 'key' ]);
+        $projects = $query->take(10)->get(['name', 'key']);
 
-        return Response()->json([ 'ecode' => 0, 'data' => parent::arrange($projects) ]);
+        return Response()->json(['ecode' => 0, 'data' => parent::arrange($projects)]);
     }
 
     /**
@@ -352,12 +345,12 @@ class ProjectController extends Controller
         $page_size = 30;
         $page = $request->input('page') ?: 1;
         $query = $query->skip($page_size * ($page - 1))->take($page_size);
-        $projects = $query->get([ 'name', 'key', 'description', 'status', 'principal' ]);
+        $projects = $query->get(['name', 'key', 'description', 'status', 'principal']);
         foreach ($projects as $key => $project) {
             $projects[$key]['principal']['nameAndEmail'] = $project['principal']['name'] . '(' . $project['principal']['email'] . ')';
         }
 
-        return Response()->json([ 'ecode' => 0, 'data' => parent::arrange($projects), 'options' => [ 'total' => $total, 'sizePerPage' => $page_size ] ]);
+        return Response()->json(['ecode' => 0, 'data' => parent::arrange($projects), 'options' => ['total' => $total, 'sizePerPage' => $page_size]]);
     }
 
     /**
@@ -393,13 +386,13 @@ class ProjectController extends Controller
 
         $principal = $request->input('principal');
         if (!isset($principal) || !$principal) {
-            $insValues['principal'] = [ 'id' => $this->user->id, 'name' => $this->user->first_name, 'email' => $this->user->email ];
+            $insValues['principal'] = ['id' => $this->user->id, 'name' => $this->user->first_name, 'email' => $this->user->email];
         } else {
             $principal_info = Sentinel::findById($principal);
             if (!$principal_info) {
                 throw new \InvalidArgumentException('the user is not exists.', -14003);
             }
-            $insValues['principal'] = [ 'id' => $principal_info->id, 'name' => $principal_info->first_name, 'email' => $principal_info->email ];
+            $insValues['principal'] = ['id' => $principal_info->id, 'name' => $principal_info->first_name, 'email' => $principal_info->email];
         }
 
         $description = $request->input('description');
@@ -409,20 +402,20 @@ class ProjectController extends Controller
 
         $insValues['category'] = 1;
         $insValues['status'] = 'active';
-        $insValues['creator'] = [ 'id' => $this->user->id, 'name' => $this->user->first_name, 'email' => $this->user->email ];
+        $insValues['creator'] = ['id' => $this->user->id, 'name' => $this->user->first_name, 'email' => $this->user->email];
 
         // save the project
         $project = Project::create($insValues); //fix me
         // add issue-type template to project
         $this->initialize($project->key);
         // trigger add user to usrproject
-        Event::fire(new AddUserToRoleEvent([ $insValues['principal']['id'] ], $key));
+        Event::fire(new AddUserToRoleEvent([$insValues['principal']['id']], $key));
 
         if (isset($project->principal)) {
-            $project->principal = array_merge($insValues['principal'], [ 'nameAndEmail' => $insValues['principal']['name'] . '(' . $insValues['principal']['email'] . ')' ]);
+            $project->principal = array_merge($insValues['principal'], ['nameAndEmail' => $insValues['principal']['name'] . '(' . $insValues['principal']['email'] . ')']);
         }
 
-        return Response()->json([ 'ecode' => 0, 'data' => $project ]);
+        return Response()->json(['ecode' => 0, 'data' => $project]);
     }
 
     /**
@@ -436,7 +429,7 @@ class ProjectController extends Controller
     {
         $types = Type::where('project_key', '$_sys_$')->get()->toArray();
         foreach ($types as $type) {
-            Type::create(array_only($type, [ 'name', 'abb', 'screen_id', 'workflow_id', 'sn', 'type', 'disabled', 'default' ]) + [ 'project_key' => $key ]);
+            Type::create(array_only($type, ['name', 'abb', 'screen_id', 'workflow_id', 'sn', 'type', 'disabled', 'default']) + ['project_key' => $key]);
         }
     }
 
@@ -497,10 +490,10 @@ class ProjectController extends Controller
             AccessProjectLog::where('project_key', $key)
                 ->where('user_id', $this->user->id)
                 ->delete();
-            AccessProjectLog::create([ 'project_key' => $key, 'user_id' => $this->user->id, 'latest_access_time' => time() ]);
+            AccessProjectLog::create(['project_key' => $key, 'user_id' => $this->user->id, 'latest_access_time' => time()]);
         }
 
-        return Response()->json([ 'ecode' => 0, 'data' => $project, 'options' => parent::arrange([ 'permissions' => $permissions ]) ]);
+        return Response()->json(['ecode' => 0, 'data' => $project, 'options' => parent::arrange(['permissions' => $permissions])]);
     }
 
     /**
@@ -531,7 +524,7 @@ class ProjectController extends Controller
             if (!$principal_info) {
                 throw new \InvalidArgumentException('the user is not exists.', -14003);
             }
-            $updValues['principal'] = [ 'id' => $principal_info->id, 'name' => $principal_info->first_name, 'email' =>  $principal_info->email ];
+            $updValues['principal'] = ['id' => $principal_info->id, 'name' => $principal_info->first_name, 'email' => $principal_info->email];
         }
 
         $description = $request->input('description');
@@ -540,7 +533,7 @@ class ProjectController extends Controller
         }
 
         $status = $request->input('status');
-        if (isset($status) && in_array($status, [ 'active', 'closed' ])) {
+        if (isset($status) && in_array($status, ['active', 'closed'])) {
             $updValues['status'] = $status;
         }
 
@@ -557,12 +550,12 @@ class ProjectController extends Controller
 
         if (isset($principal)) {
             if ($old_principal['id'] != $principal) {
-                Event::fire(new AddUserToRoleEvent([ $principal ], $project->key));
-                Event::fire(new DelUserFromRoleEvent([ $old_principal['id'] ], $project->key));
+                Event::fire(new AddUserToRoleEvent([$principal], $project->key));
+                Event::fire(new DelUserFromRoleEvent([$old_principal['id']], $project->key));
             }
         }
 
-        return Response()->json([ 'ecode' => 0, 'data' => Project::find($id) ]);
+        return Response()->json(['ecode' => 0, 'data' => Project::find($id)]);
     }
 
     /**
@@ -580,7 +573,7 @@ class ProjectController extends Controller
 
         $project_key = $project->key;
         //$related_cols = [ 'version', 'module', 'board', 'epic', 'sprint', 'sprint_log', 'searcher', 'access_project_log', 'access_board_log', 'user_group_project', 'watch', 'acl_role', 'acl_roleactor', 'acl_role_permissions', 'oswf_definition' ];
-        $unrelated_cols = [ 'system.indexes', 'users', 'persistences', 'throttle', 'project' ];
+        $unrelated_cols = ['system.indexes', 'users', 'persistences', 'throttle', 'project'];
         // delete releted table
         $collections = DB::listCollections();
         foreach ($collections as $col) {
@@ -593,7 +586,7 @@ class ProjectController extends Controller
                 in_array($col_name, $unrelated_cols)) {
                 continue;
             }
-    
+
             DB::collection($col_name)->where('project_key', $project_key)->delete();
         }
 
@@ -607,7 +600,7 @@ class ProjectController extends Controller
         // delete from the project table
         Project::destroy($id);
 
-        return Response()->json([ 'ecode' => 0, 'data' => [ 'id' => $id ] ]);
+        return Response()->json(['ecode' => 0, 'data' => ['id' => $id]]);
     }
 
     /**
@@ -619,6 +612,6 @@ class ProjectController extends Controller
     public function checkKey($key)
     {
         $isExisted = Project::Where('key', $key)->exists();
-        return Response()->json([ 'ecode' => 0, 'data' => [ 'flag' => $isExisted ? '2' : '1' ] ]);
+        return Response()->json(['ecode' => 0, 'data' => ['flag' => $isExisted ? '2' : '1']]);
     }
 }

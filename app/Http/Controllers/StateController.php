@@ -1,16 +1,14 @@
 <?php
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
-
-use App\Http\Requests;
-use App\Http\Controllers\Controller;
 use App\Customization\Eloquent\State;
 use App\Customization\Eloquent\StateProperty;
-use App\Workflow\Eloquent\Definition;
+use App\Http\Controllers\Controller;
 use App\Project\Eloquent\Project;
 use App\Project\Provider;
+use App\Workflow\Eloquent\Definition;
 use DB;
+use Illuminate\Http\Request;
 
 class StateController extends Controller
 {
@@ -23,9 +21,9 @@ class StateController extends Controller
     {
         $states = Provider::getStateList($project_key);
         foreach ($states as $key => $state) {
-            $workflows = Definition::whereRaw([ 'state_ids' => isset($state['key']) ? $state['key'] : $state['_id'] ])
+            $workflows = Definition::whereRaw(['state_ids' => isset($state['key']) ? $state['key'] : $state['_id']])
                 ->orderBy('project_key', 'asc')
-                ->get([ 'project_key', 'name' ])
+                ->get(['project_key', 'name'])
                 ->toArray();
             $states[$key]['workflows'] = $workflows;
 
@@ -64,7 +62,7 @@ class StateController extends Controller
             throw new \UnexpectedValueException('state name cannot be repeated', -12401);
         }
 
-        $state = State::create([ 'project_key' => $project_key, 'sn' => time() ] + $request->all());
+        $state = State::create(['project_key' => $project_key, 'sn' => time()] + $request->all());
         return Response()->json(['ecode' => 0, 'data' => $state]);
     }
 
@@ -143,7 +141,7 @@ class StateController extends Controller
             throw new \UnexpectedValueException('the state has been used in issue.', -12403);
         }
 
-        $isUsed = Definition::whereRaw([ 'state_ids' => isset($state->key) ? $state->key : $id ])->exists();
+        $isUsed = Definition::whereRaw(['state_ids' => isset($state->key) ? $state->key : $id])->exists();
         if ($isUsed) {
             throw new \UnexpectedValueException('the state has been used in workflow.', -12404);
         }
@@ -187,10 +185,10 @@ class StateController extends Controller
             $state_property->fill($properties);
             $state_property->save();
         } else {
-            StateProperty::create([ 'project_key' => $project_key ] + $properties);
+            StateProperty::create(['project_key' => $project_key] + $properties);
         }
 
-        return Response()->json(['ecode' => 0, 'data' => [ 'sequence' => $sequence ]]);
+        return Response()->json(['ecode' => 0, 'data' => ['sequence' => $sequence]]);
     }
 
     /**
@@ -215,7 +213,7 @@ class StateController extends Controller
             }
         }
 
-        return Response()->json(['ecode' => 0, 'data' => [ 'sequence' => $sequence ]]);
+        return Response()->json(['ecode' => 0, 'data' => ['sequence' => $sequence]]);
     }
 
     /**
@@ -226,7 +224,7 @@ class StateController extends Controller
     public function viewUsedInProject($project_key, $id)
     {
         if ($project_key !== '$_sys_$') {
-            return Response()->json(['ecode' => 0, 'data' => [] ]);
+            return Response()->json(['ecode' => 0, 'data' => []]);
         }
 
         $res = [];
@@ -240,17 +238,17 @@ class StateController extends Controller
             $workflows = Definition::where('state_ids', $id)
                 ->where('project_key', '<>', '$_sys_$')
                 ->where('project_key', $project->key)
-                ->get([ 'id', 'name' ])
+                ->get(['id', 'name'])
                 ->toArray();
 
             if ($count > 0 || $workflows) {
-                $tmp = [ 'key' => $project->key, 'name' => $project->name, 'status' => $project->status ];
+                $tmp = ['key' => $project->key, 'name' => $project->name, 'status' => $project->status];
                 $tmp['issue_count'] = $count > 0 ? $count : 0;
                 $tmp['workflows'] = $workflows ?: [];
                 $res[] = $tmp;
             }
         }
 
-        return Response()->json(['ecode' => 0, 'data' => $res ]);
+        return Response()->json(['ecode' => 0, 'data' => $res]);
     }
 }

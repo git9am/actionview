@@ -2,9 +2,8 @@
 
 namespace App\Http\Middleware;
 
-use App\Project\Eloquent\Project;
 use App\Acl\Acl;
-
+use App\Project\Eloquent\Project;
 use Closure;
 use Sentinel;
 
@@ -21,19 +20,19 @@ class Privilege
     {
         // global permission check
         if ($permission === 'sys_admin') {
-            if (! $this->globalCheck('sys_admin')) {
+            if (!$this->globalCheck('sys_admin')) {
                 return Response()->json(['ecode' => -10002, 'emsg' => 'permission denied.']);
             }
         } elseif ($permission === 'view_project') {
             if ($request->isMethod('get')) {
-                if (! $this->projectCheck($request, 'view_project')) {
+                if (!$this->projectCheck($request, 'view_project')) {
                     return Response()->json(['ecode' => -10002, 'emsg' => 'permission denied.']);
                 }
             }
         }
         // project permission check
         else {
-            if (! $this->projectCheck($request, $permission)) {
+            if (!$this->projectCheck($request, $permission)) {
                 return Response()->json(['ecode' => -10002, 'emsg' => 'permission denied.']);
             }
         }
@@ -83,7 +82,7 @@ class Privilege
         $project_key = $request->project_key;
 
         if ($project_key === '$_sys_$') {
-            return $user->hasAccess([ 'sys_admin' ]);
+            return $user->hasAccess(['sys_admin']);
         }
 
         $isAllowed = Acl::isAllowed($user->id, $permission, $project_key);

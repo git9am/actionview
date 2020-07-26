@@ -2,19 +2,15 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Event;
-
-use App\Http\Requests;
-use App\Http\Controllers\Controller;
-
 use App\Acl\Eloquent\Group;
-use Cartalyst\Sentinel\Users\EloquentUser;
 use App\ActiveDirectory\Eloquent\Directory;
 use App\ActiveDirectory\LDAP;
-
 use App\Events\DelGroupEvent;
 use App\Events\DelUserEvent;
+use App\Http\Controllers\Controller;
+use Cartalyst\Sentinel\Users\EloquentUser;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Event;
 
 class DirectoryController extends Controller
 {
@@ -31,13 +27,13 @@ class DirectoryController extends Controller
      */
     public function index(Request $request)
     {
-        $directories =  Directory::all()->toArray();
+        $directories = Directory::all()->toArray();
         foreach ($directories as $k => $d) {
             if (isset($d['configs']) && $d['configs'] && isset($d['configs']['admin_password'])) {
                 unset($directories[$k]['configs']['admin_password']);
             }
         }
-        return Response()->json([ 'ecode' => 0, 'data' => $directories ]);
+        return Response()->json(['ecode' => 0, 'data' => $directories]);
     }
 
     /**
@@ -103,7 +99,6 @@ class DirectoryController extends Controller
         }
         $configs['user_email_attr'] = $user_email_attr;
 
-
         if (!($group_object_class = $request->input('group_object_class'))) {
             throw new \UnexpectedValueException('the group object class can not be empty.', -10310);
         }
@@ -124,8 +119,8 @@ class DirectoryController extends Controller
         }
         $configs['group_membership_attr'] = $group_membership_attr;
 
-        $directory = Directory::create([ 'name' => $name, 'type' => 'OpenLDAP', 'invalid_flag' => 0, 'configs' => $configs ]);
-        return Response()->json([ 'ecode' => 0, 'data' => $directory ]);
+        $directory = Directory::create(['name' => $name, 'type' => 'OpenLDAP', 'invalid_flag' => 0, 'configs' => $configs]);
+        return Response()->json(['ecode' => 0, 'data' => $directory]);
     }
 
     /**
@@ -140,7 +135,7 @@ class DirectoryController extends Controller
         if (!$directory) {
             throw new \UnexpectedValueException('the directory does not exist.', -10314);
         }
-        return Response()->json([ 'ecode' => 0, 'data' => $directory ]);
+        return Response()->json(['ecode' => 0, 'data' => $directory]);
     }
 
     /**
@@ -289,14 +284,14 @@ class DirectoryController extends Controller
         }
 
         if ($configs) {
-            $updValues['configs'] = isset($directory->configs) ? array_merge($directory->configs ?: [], $configs) : $configs;
+            $updValues['configs'] = isset($directory->configs) ? array_merge($directory->configs ?: [], $configs): $configs;
         }
 
         $invalid_flag = $request->input('invalid_flag');
         if (isset($invalid_flag)) {
             $updValues['invalid_flag'] = intval($invalid_flag);
         }
-        
+
         $directory->fill($updValues)->save();
 
         //if (isset($invalid_flag))
@@ -337,7 +332,7 @@ class DirectoryController extends Controller
         }
 
         Directory::destroy($id);
-        return Response()->json([ 'ecode' => 0, 'data' => [ 'id' => $id ] ]);
+        return Response()->json(['ecode' => 0, 'data' => ['id' => $id]]);
     }
 
     /**
@@ -357,11 +352,11 @@ class DirectoryController extends Controller
         }
 
         $configs = [
-            'default' => $directory->configs
+            'default' => $directory->configs,
         ];
 
         $ret = LDAP::test($configs);
-        return Response()->json([ 'ecode' => 0, 'data' => array_pop($ret) ]);
+        return Response()->json(['ecode' => 0, 'data' => array_pop($ret)]);
     }
 
     /**
@@ -381,7 +376,7 @@ class DirectoryController extends Controller
         }
 
         $configs = [
-            $id => $directory->configs
+            $id => $directory->configs,
         ];
 
         $ret = LDAP::sync($configs);
@@ -394,6 +389,6 @@ class DirectoryController extends Controller
             throw new \UnexpectedValueException('the group sync failed.', -10317);
         }
 
-        return Response()->json([ 'ecode' => 0, 'data' => [ 'user' => $sync_info['user'], 'group' => $sync_info['group'] ] ]);
+        return Response()->json(['ecode' => 0, 'data' => ['user' => $sync_info['user'], 'group' => $sync_info['group']]]);
     }
 }

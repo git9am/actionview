@@ -2,15 +2,13 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Event;
-
-use App\Http\Requests;
-use App\Http\Controllers\Controller;
 use App\Events\WikiEvent;
+use App\Http\Controllers\Controller;
 use App\Utils\File;
 use DB;
-use Zipper;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Event;
+use Madzipper;
 
 class WikiController extends Controller
 {
@@ -22,13 +20,13 @@ class WikiController extends Controller
      */
     public function searchPath(Request $request, $project_key)
     {
-        $s =  $request->input('s');
+        $s = $request->input('s');
         if (!$s) {
             return Response()->json(['ecode' => 0, 'data' => []]);
         }
 
         if ($s === '/') {
-            return Response()->json(['ecode' => 0, 'data' => [ [ 'id' => '0', 'name' => '/' ] ] ]);
+            return Response()->json(['ecode' => 0, 'data' => [['id' => '0', 'name' => '/']]]);
         }
 
         $query = DB::collection('wiki_' . $project_key)
@@ -50,7 +48,7 @@ class WikiController extends Controller
             $path = '';
             $ps = DB::collection('wiki_' . $project_key)
                 ->whereIn('_id', $d['pt'])
-                ->get([ 'name' ]);
+                ->get(['name']);
             foreach ($ps as $val) {
                 $parents[$val['_id']->__toString()] = $val['name'];
             }
@@ -61,7 +59,7 @@ class WikiController extends Controller
                 }
             }
             $path .= '/' . $d['name'];
-            $ret[] = [ 'id' => $d['_id']->__toString(), 'name' => $path ];
+            $ret[] = ['id' => $d['_id']->__toString(), 'name' => $path];
         }
         return Response()->json(['ecode' => 0, 'data' => parent::arrange($ret)]);
     }
@@ -85,11 +83,11 @@ class WikiController extends Controller
                 'id' => $val['_id']->__toString(),
                 'name' => $val['name'],
                 'd' => isset($val['d']) ? $val['d'] : 0,
-                'parent' => isset($val['parent']) ? $val['parent'] : ''
+                'parent' => isset($val['parent']) ? $val['parent'] : '',
             ];
         }
 
-        return Response()->json([ 'ecode' => 0, 'data' => $res ]);
+        return Response()->json(['ecode' => 0, 'data' => $res]);
     }
 
     /**
@@ -99,14 +97,14 @@ class WikiController extends Controller
      */
     public function getDirTree(Request $request, $project_key)
     {
-        $dt = [ 'id' => '0', 'name' => '根目录', 'd' => 1 ];
+        $dt = ['id' => '0', 'name' => '根目录', 'd' => 1];
 
         $curnode = $request->input('currentnode');
         if (!$curnode) {
             $curnode = '0';
         }
 
-        $pt = [ '0' ];
+        $pt = ['0'];
         if ($curnode !== '0') {
             $node = DB::collection('wiki_' . $project_key)
                 ->where('_id', $curnode)
@@ -129,7 +127,7 @@ class WikiController extends Controller
             $this->addChildren2Tree($dt, $val, $sub_dirs);
         }
 
-        return Response()->json([ 'ecode' => 0, 'data' => $dt ]);
+        return Response()->json(['ecode' => 0, 'data' => $dt]);
     }
 
     /**
@@ -148,7 +146,7 @@ class WikiController extends Controller
                 'id' => $val['_id']->__toString(),
                 'name' => $val['name'],
                 'd' => isset($val['d']) ? $val['d'] : 0,
-                'parent' => isset($val['parent']) ? $val['parent'] : ''
+                'parent' => isset($val['parent']) ? $val['parent'] : '',
             ];
         }
 
@@ -190,7 +188,7 @@ class WikiController extends Controller
         if (isset($updated_at) && $updated_at) {
             $mode = 'search';
             $query->where(function ($query) use ($updated_at) {
-                $unitMap = [ 'w' => 'week', 'm' => 'month', 'y' => 'year' ];
+                $unitMap = ['w' => 'week', 'm' => 'month', 'y' => 'year'];
                 $unit = substr($updated_at, -1);
                 $val = abs(substr($updated_at, 0, -1));
                 $query->where('created_at', '>=', strtotime(date('Ymd', strtotime('-' . $val . ' ' . $unitMap[$unit]))))
@@ -216,7 +214,7 @@ class WikiController extends Controller
         $path = [];
         $home = [];
         if ($directory === '0') {
-            $path[] = [ 'id' => '0', 'name' => 'root' ];
+            $path[] = ['id' => '0', 'name' => 'root'];
             if ($mode === 'list') {
                 foreach ($documents as $doc) {
                     if ((!isset($doc['d']) || $doc['d'] != 1) && strtolower($doc['name']) === 'home') {
@@ -231,10 +229,10 @@ class WikiController extends Controller
             if ($d && isset($d['pt'])) {
                 $path = $this->getPathTreeDetail($project_key, $d['pt']);
             }
-            $path[] = [ 'id' => $directory, 'name' => $d['name'] ];
+            $path[] = ['id' => $directory, 'name' => $d['name']];
         }
 
-        return Response()->json([ 'ecode' => 0, 'data' => parent::arrange($documents), 'options' => [ 'path' => $path, 'home' => parent::arrange($home) ] ]);
+        return Response()->json(['ecode' => 0, 'data' => parent::arrange($documents), 'options' => ['path' => $path, 'home' => parent::arrange($home)]]);
     }
 
     /**
@@ -246,7 +244,7 @@ class WikiController extends Controller
      */
     public function create(Request $request, $project_key)
     {
-        $d =  $request->input('d');
+        $d = $request->input('d');
         if (isset($d) && $d == 1) {
             if (!$this->isPermissionAllowed($project_key, 'manage_project')) {
                 return Response()->json(['ecode' => -10002, 'emsg' => 'permission denied.']);
@@ -308,12 +306,12 @@ class WikiController extends Controller
 
         $insValues['pt'] = $this->getPathTree($project_key, $parent);
         $insValues['version'] = 1;
-        $insValues['creator'] = [ 'id' => $this->user->id, 'name' => $this->user->first_name, 'email' => $this->user->email ];
+        $insValues['creator'] = ['id' => $this->user->id, 'name' => $this->user->first_name, 'email' => $this->user->email];
         $insValues['created_at'] = time();
         $id = DB::collection('wiki_' . $project_key)->insertGetId($insValues);
 
         $isSendMsg = $request->input('isSendMsg') && true;
-        Event::fire(new WikiEvent($project_key, $insValues['creator'], [ 'event_key' => 'create_wiki', 'isSendMsg' => $isSendMsg, 'data' => [ 'wiki_id' => $id->__toString() ] ]));
+        Event::fire(new WikiEvent($project_key, $insValues['creator'], ['event_key' => 'create_wiki', 'isSendMsg' => $isSendMsg, 'data' => ['wiki_id' => $id->__toString()]]));
 
         return $this->show($request, $project_key, $id);
     }
@@ -346,7 +344,7 @@ class WikiController extends Controller
             }
         }
 
-        $name =  $request->input('name');
+        $name = $request->input('name');
         if (!isset($name) || !$name) {
             throw new \UnexpectedValueException('the name can not be empty.', -11952);
         }
@@ -364,7 +362,7 @@ class WikiController extends Controller
 
         $insValues['pt'] = $this->getPathTree($project_key, $parent);
         $insValues['d'] = 1;
-        $insValues['creator'] = [ 'id' => $this->user->id, 'name' => $this->user->first_name, 'email' => $this->user->email ];
+        $insValues['creator'] = ['id' => $this->user->id, 'name' => $this->user->first_name, 'email' => $this->user->email];
         $insValues['created_at'] = time();
 
         $id = DB::collection('wiki_' . $project_key)->insertGetId($insValues);
@@ -394,7 +392,7 @@ class WikiController extends Controller
         }
 
         $checkin = [];
-        $checkin['user'] = [ 'id' => $this->user->id, 'name' => $this->user->first_name, 'email' => $this->user->email ];
+        $checkin['user'] = ['id' => $this->user->id, 'name' => $this->user->first_name, 'email' => $this->user->email];
         $checkin['at'] = time();
 
         DB::collection('wiki_' . $project_key)->where('_id', $id)->update(['checkin' => $checkin]);
@@ -438,7 +436,7 @@ class WikiController extends Controller
         $parents = [];
         $ps = DB::collection('wiki_' . $project_key)
             ->whereIn('_id', $pt)
-            ->get([ 'name' ]);
+            ->get(['name']);
         foreach ($ps as $val) {
             $parents[$val['_id']->__toString()] = $val['name'];
         }
@@ -446,9 +444,9 @@ class WikiController extends Controller
         $path = [];
         foreach ($pt as $pid) {
             if ($pid === '0') {
-                $path[] = [ 'id' => '0', 'name' => 'root' ];
+                $path[] = ['id' => '0', 'name' => 'root'];
             } elseif (isset($parents[$pid])) {
-                $path[] = [ 'id' => $pid, 'name' => $parents[$pid] ];
+                $path[] = ['id' => $pid, 'name' => $parents[$pid]];
             }
         }
         return $path;
@@ -464,12 +462,12 @@ class WikiController extends Controller
     {
         $pt = [];
         if ($directory === '0') {
-            $pt = [ '0' ];
+            $pt = ['0'];
         } else {
             $d = DB::collection('wiki_' . $project_key)
                 ->where('_id', $directory)
                 ->first();
-            $pt = array_merge($d['pt'], [ $directory ]);
+            $pt = array_merge($d['pt'], [$directory]);
         }
         return $pt;
     }
@@ -493,12 +491,12 @@ class WikiController extends Controller
         }
 
         $newest = [];
-        $newest['name']       = $document['name'];
-        $newest['editor']     = isset($document['editor']) ? $document['editor'] : $document['creator'];
+        $newest['name'] = $document['name'];
+        $newest['editor'] = isset($document['editor']) ? $document['editor'] : $document['creator'];
         $newest['updated_at'] = isset($document['updated_at']) ? $document['updated_at'] : $document['created_at'];
-        $newest['version']    = $document['version'];
+        $newest['version'] = $document['version'];
 
-        $v =  $request->input('v');
+        $v = $request->input('v');
         if (isset($v) && intval($v) != $document['version']) {
             $w = DB::collection('wiki_version_' . $project_key)
                 ->where('wid', $id)
@@ -508,13 +506,13 @@ class WikiController extends Controller
                 throw new \UnexpectedValueException('the version does not exist.', -11957);
             }
 
-            $document['name']       = $w['name'];
-            $document['contents']   = $w['contents'];
-            $document['editor']     = $w['editor'];
+            $document['name'] = $w['name'];
+            $document['contents'] = $w['contents'];
+            $document['editor'] = $w['editor'];
             $document['updated_at'] = $w['updated_at'];
-            $document['version']    = $w['version'];
+            $document['version'] = $w['version'];
         }
-        
+
         $document['versions'] = DB::collection('wiki_version_' . $project_key)
             ->where('wid', $id)
             ->orderBy('_id', 'desc')
@@ -523,7 +521,7 @@ class WikiController extends Controller
 
         $path = $this->getPathTreeDetail($project_key, $document['pt']);
 
-        return Response()->json(['ecode' => 0, 'data' => parent::arrange($document), 'options' => [ 'path' => $path ]]);
+        return Response()->json(['ecode' => 0, 'data' => parent::arrange($document), 'options' => ['path' => $path]]);
     }
 
     /**
@@ -536,7 +534,7 @@ class WikiController extends Controller
      */
     public function update(Request $request, $project_key, $id)
     {
-        $name =  $request->input('name');
+        $name = $request->input('name');
         if (!isset($name) || !$name) {
             throw new \UnexpectedValueException('the name can not be empty.', -11952);
         }
@@ -592,8 +590,8 @@ class WikiController extends Controller
                 $updValues['version'] = 2;
             }
         }
-        
-        $updValues['editor'] = [ 'id' => $this->user->id, 'name' => $this->user->first_name, 'email' => $this->user->email ];
+
+        $updValues['editor'] = ['id' => $this->user->id, 'name' => $this->user->first_name, 'email' => $this->user->email];
         $updValues['updated_at'] = time();
         DB::collection('wiki_' . $project_key)->where('_id', $id)->update($updValues);
 
@@ -605,7 +603,7 @@ class WikiController extends Controller
             $this->recordVersion($project_key, $old_document);
 
             $isSendMsg = $request->input('isSendMsg') && true;
-            Event::fire(new WikiEvent($project_key, $updValues['editor'], [ 'event_key' => 'edit_wiki', 'isSendMsg' => $isSendMsg, 'data' => [ 'wiki_id' => $id ] ]));
+            Event::fire(new WikiEvent($project_key, $updValues['editor'], ['event_key' => 'edit_wiki', 'isSendMsg' => $isSendMsg, 'data' => ['wiki_id' => $id]]));
 
             return $this->show($request, $project_key, $id);
         } else {
@@ -624,12 +622,12 @@ class WikiController extends Controller
     {
         $insValues = [];
 
-        $insValues['wid']         = $document['_id']->__toString();
-        $insValues['name']        = isset($document['name']) ? $document['name'] : '';
-        $insValues['contents']    = isset($document['contents']) ? $document['contents'] : '';
-        $insValues['version']     = isset($document['version']) ? $document['version'] : 1;
-        $insValues['editor']      = isset($document['editor']) ? $document['editor'] : $document['creator'];
-        $insValues['updated_at']  = isset($document['updated_at']) ? $document['updated_at'] : $document['created_at'];
+        $insValues['wid'] = $document['_id']->__toString();
+        $insValues['name'] = isset($document['name']) ? $document['name'] : '';
+        $insValues['contents'] = isset($document['contents']) ? $document['contents'] : '';
+        $insValues['version'] = isset($document['version']) ? $document['version'] : 1;
+        $insValues['editor'] = isset($document['editor']) ? $document['editor'] : $document['creator'];
+        $insValues['updated_at'] = isset($document['updated_at']) ? $document['updated_at'] : $document['created_at'];
 
         DB::collection('wiki_version_' . $project_key)->insert($insValues);
     }
@@ -642,17 +640,17 @@ class WikiController extends Controller
      */
     public function copy(Request $request, $project_key)
     {
-        $id =  $request->input('id');
+        $id = $request->input('id');
         if (!isset($id) || !$id) {
             throw new \UnexpectedValueException('the copy object can not be empty.', -11960);
         }
 
-        $name =  $request->input('name');
+        $name = $request->input('name');
         if (!isset($name) || !$name) {
             throw new \UnexpectedValueException('the name can not be empty.', -11952);
         }
 
-        $dest_path =  $request->input('dest_path');
+        $dest_path = $request->input('dest_path');
         if (!isset($dest_path)) {
             throw new \UnexpectedValueException('the dest directory can not be empty.', -11961);
         }
@@ -700,8 +698,8 @@ class WikiController extends Controller
         $insValues['version'] = 1;
         $insValues['contents'] = isset($document['contents']) ? $document['contents'] : '';
         $insValues['attachments'] = isset($document['attachments']) ? $document['attachments'] : [];
-            
-        $insValues['creator'] = [ 'id' => $this->user->id, 'name' => $this->user->first_name, 'email' => $this->user->email ];
+
+        $insValues['creator'] = ['id' => $this->user->id, 'name' => $this->user->first_name, 'email' => $this->user->email];
         $insValues['created_at'] = time();
 
         $new_id = DB::collection('wiki_' . $project_key)->insertGetId($insValues);
@@ -719,12 +717,12 @@ class WikiController extends Controller
      */
     public function move(Request $request, $project_key)
     {
-        $id =  $request->input('id');
+        $id = $request->input('id');
         if (!isset($id) || !$id) {
             throw new \UnexpectedValueException('the move object can not be empty.', -11964);
         }
 
-        $dest_path =  $request->input('dest_path');
+        $dest_path = $request->input('dest_path');
         if (!isset($dest_path)) {
             throw new \UnexpectedValueException('the dest directory can not be empty.', -11965);
         }
@@ -812,16 +810,16 @@ class WikiController extends Controller
             }
         }
 
-        DB::collection('wiki_' . $project_key)->where('_id', $id)->update([ 'del_flag' => 1 ]);
+        DB::collection('wiki_' . $project_key)->where('_id', $id)->update(['del_flag' => 1]);
 
         if (isset($document['d']) && $document['d'] === 1) {
-            DB::collection('wiki_' . $project_key)->whereRaw([ 'pt' => $id ])->update([ 'del_flag' => 1 ]);
+            DB::collection('wiki_' . $project_key)->whereRaw(['pt' => $id])->update(['del_flag' => 1]);
         }
 
-        $user = [ 'id' => $this->user->id, 'name' => $this->user->first_name, 'email' => $this->user->email ];
-        Event::fire(new WikiEvent($project_key, $user, [ 'event_key' => 'delete_wiki', 'wiki_id' => $id ]));
+        $user = ['id' => $this->user->id, 'name' => $this->user->first_name, 'email' => $this->user->email];
+        Event::fire(new WikiEvent($project_key, $user, ['event_key' => 'delete_wiki', 'wiki_id' => $id]));
 
-        return Response()->json(['ecode' => 0, 'data' => [ 'id' => $id ]]);
+        return Response()->json(['ecode' => 0, 'data' => ['id' => $id]]);
     }
 
     /**
@@ -865,12 +863,12 @@ class WikiController extends Controller
         $data = [];
 
         $data['name'] = $_FILES[$field]['name'];
-        ;
-        $data['size']    = $_FILES[$field]['size'];
-        $data['type']    = $_FILES[$field]['type'];
-        $data['id'] = $data['index']   = $basename;
 
-        $data['uploader'] = [ 'id' => $this->user->id, 'name' => $this->user->first_name, 'email' => $this->user->email ];
+        $data['size'] = $_FILES[$field]['size'];
+        $data['type'] = $_FILES[$field]['type'];
+        $data['id'] = $data['index'] = $basename;
+
+        $data['uploader'] = ['id' => $this->user->id, 'name' => $this->user->first_name, 'email' => $this->user->email];
         $data['uploaded_at'] = time();
 
         $attachments = [];
@@ -879,7 +877,7 @@ class WikiController extends Controller
         }
 
         $attachments[] = $data;
-        DB::collection('wiki_' . $project_key)->where('_id', $wid)->update([ 'attachments' => $attachments ]);
+        DB::collection('wiki_' . $project_key)->where('_id', $wid)->update(['attachments' => $attachments]);
 
         return Response()->json(['ecode' => 0, 'data' => $data]);
     }
@@ -913,8 +911,8 @@ class WikiController extends Controller
             }
         }
 
-        DB::collection('wiki_' . $project_key)->where('_id', $wid)->update([ 'attachments' => $new_attachments ]);
-        return Response()->json(['ecode' => 0, 'data' => [ 'id' => $fid ]]);
+        DB::collection('wiki_' . $project_key)->where('_id', $wid)->update(['attachments' => $new_attachments]);
+        return Response()->json(['ecode' => 0, 'data' => ['id' => $fid]]);
     }
 
     /**
@@ -1010,8 +1008,8 @@ class WikiController extends Controller
         }
 
         $fname = $basepath . '/' . $name . '.zip';
-        Zipper::make($fname)->folder($name)->add($basepath . '/' . $name);
-        Zipper::close();
+        Madzipper::make($fname)->folder($name)->add($basepath . '/' . $name);
+        Madzipper::close();
 
         File::download($fname, $name . '.zip');
 

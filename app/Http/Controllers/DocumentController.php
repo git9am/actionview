@@ -2,16 +2,11 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
-
-use App\Http\Requests;
 use App\Http\Controllers\Controller;
-use App\Events\DocumentEvent;
-use App\Acl\Acl;
-use DB;
 use App\Utils\File;
-
-use Zipper;
+use DB;
+use Illuminate\Http\Request;
+use Madzipper;
 
 class DocumentController extends Controller
 {
@@ -23,13 +18,13 @@ class DocumentController extends Controller
      */
     public function searchPath(Request $request, $project_key)
     {
-        $s =  $request->input('s');
+        $s = $request->input('s');
         if (!$s) {
             return Response()->json(['ecode' => 0, 'data' => []]);
         }
 
         if ($s === '/') {
-            return Response()->json(['ecode' => 0, 'data' => [ [ 'id' => '0', 'name' => '/' ] ] ]);
+            return Response()->json(['ecode' => 0, 'data' => [['id' => '0', 'name' => '/']]]);
         }
 
         $query = DB::collection('document_' . $project_key)
@@ -51,7 +46,7 @@ class DocumentController extends Controller
             $path = '';
             $ps = DB::collection('document_' . $project_key)
                 ->whereIn('_id', $d['pt'])
-                ->get([ 'name' ]);
+                ->get(['name']);
             foreach ($ps as $val) {
                 $parents[$val['_id']->__toString()] = $val['name'];
             }
@@ -62,7 +57,7 @@ class DocumentController extends Controller
                 }
             }
             $path .= '/' . $d['name'];
-            $ret[] = [ 'id' => $d['_id']->__toString(), 'name' => $path ];
+            $ret[] = ['id' => $d['_id']->__toString(), 'name' => $path];
         }
         return Response()->json(['ecode' => 0, 'data' => parent::arrange($ret)]);
     }
@@ -83,10 +78,10 @@ class DocumentController extends Controller
 
         $res = [];
         foreach ($sub_dirs as $val) {
-            $res[] = [ 'id' => $val['_id']->__toString(), 'name' => $val['name'] ];
+            $res[] = ['id' => $val['_id']->__toString(), 'name' => $val['name']];
         }
 
-        return Response()->json([ 'ecode' => 0, 'data' => $res ]);
+        return Response()->json(['ecode' => 0, 'data' => $res]);
     }
 
     /**
@@ -96,14 +91,14 @@ class DocumentController extends Controller
      */
     public function getDirTree(Request $request, $project_key)
     {
-        $dt = [ 'id' => '0', 'name' => '根目录' ];
+        $dt = ['id' => '0', 'name' => '根目录'];
 
         $curdir = $request->input('currentdir');
         if (!$curdir) {
             $curdir = '0';
         }
 
-        $pt = [ '0' ];
+        $pt = ['0'];
         if ($curdir !== '0') {
             $node = DB::collection('document_' . $project_key)
                 ->where('_id', $curdir)
@@ -125,7 +120,7 @@ class DocumentController extends Controller
             $this->addChildren2Tree($dt, $val, $sub_dirs);
         }
 
-        return Response()->json([ 'ecode' => 0, 'data' => $dt ]);
+        return Response()->json(['ecode' => 0, 'data' => $dt]);
     }
 
     /**
@@ -140,7 +135,7 @@ class DocumentController extends Controller
     {
         $new_dirs = [];
         foreach ($sub_dirs as $val) {
-            $new_dirs[] = [ 'id' => $val['_id']->__toString(), 'name' => $val['name'] ];
+            $new_dirs[] = ['id' => $val['_id']->__toString(), 'name' => $val['name']];
         }
 
         if ($dt['id'] == $parent_id) {
@@ -170,9 +165,9 @@ class DocumentController extends Controller
         $uploaders = DB::collection('document_' . $project_key)
             ->where('del_flag', '<>', 1)
             ->distinct('uploader')
-            ->get([ 'uploader' ]);
+            ->get(['uploader']);
 
-        return Response()->json(['ecode' => 0, 'data' => [ 'uploader' => $uploaders ]]);
+        return Response()->json(['ecode' => 0, 'data' => ['uploader' => $uploaders]]);
     }
 
     /**
@@ -201,7 +196,7 @@ class DocumentController extends Controller
         $uploaded_at = $request->input('uploaded_at');
         if (isset($uploaded_at) && $uploaded_at) {
             $mode = 'search';
-            $unitMap = [ 'w' => 'week', 'm' => 'month', 'y' => 'year' ];
+            $unitMap = ['w' => 'week', 'm' => 'month', 'y' => 'year'];
             $unit = substr($uploaded_at, -1);
             $val = abs(substr($uploaded_at, 0, -1));
             $query->where('uploaded_at', '>=', strtotime(date('Ymd', strtotime('-' . $val . ' ' . $unitMap[$unit]))));
@@ -224,9 +219,9 @@ class DocumentController extends Controller
 
         $path = [];
         if ($directory === '0') {
-            $path[] = [ 'id' => '0', 'name' => 'root' ];
+            $path[] = ['id' => '0', 'name' => 'root'];
         } else {
-            $path[] = [ 'id' => '0', 'name' => 'root' ];
+            $path[] = ['id' => '0', 'name' => 'root'];
             $d = DB::collection('document_' . $project_key)
                 ->where('_id', $directory)
                 ->first();
@@ -234,21 +229,21 @@ class DocumentController extends Controller
                 $parents = [];
                 $ps = DB::collection('document_' . $project_key)
                     ->whereIn('_id', $d['pt'])
-                    ->get([ 'name' ]);
+                    ->get(['name']);
                 foreach ($ps as $val) {
                     $parents[$val['_id']->__toString()] = $val['name'];
                 }
 
                 foreach ($d['pt'] as $pid) {
                     if (isset($parents[$pid])) {
-                        $path[] = [ 'id' => $pid, 'name' => $parents[$pid] ];
+                        $path[] = ['id' => $pid, 'name' => $parents[$pid]];
                     }
                 }
             }
-            $path[] = [ 'id' => $directory, 'name' => $d['name'] ];
+            $path[] = ['id' => $directory, 'name' => $d['name']];
         }
 
-        return Response()->json([ 'ecode' => 0, 'data' => parent::arrange($documents), 'options' => [ 'path' => $path ] ]);
+        return Response()->json(['ecode' => 0, 'data' => parent::arrange($documents), 'options' => ['path' => $path]]);
     }
 
     /**
@@ -279,7 +274,7 @@ class DocumentController extends Controller
             }
         }
 
-        $name =  $request->input('name');
+        $name = $request->input('name');
         if (!isset($name) || !$name) {
             throw new \UnexpectedValueException('the name can not be empty.', -11900);
         }
@@ -297,7 +292,7 @@ class DocumentController extends Controller
 
         $insValues['pt'] = $this->getParentTree($project_key, $parent);
         $insValues['d'] = 1;
-        $insValues['creator'] = [ 'id' => $this->user->id, 'name' => $this->user->first_name, 'email' => $this->user->email ];
+        $insValues['creator'] = ['id' => $this->user->id, 'name' => $this->user->first_name, 'email' => $this->user->email];
         $insValues['created_at'] = time();
 
         $id = DB::collection('document_' . $project_key)->insertGetId($insValues);
@@ -316,12 +311,12 @@ class DocumentController extends Controller
     {
         $pt = [];
         if ($directory === '0') {
-            $pt = [ '0' ];
+            $pt = ['0'];
         } else {
             $d = DB::collection('document_' . $project_key)
                 ->where('_id', $directory)
                 ->first();
-            $pt = array_merge($d['pt'], [ $directory ]);
+            $pt = array_merge($d['pt'], [$directory]);
         }
         return $pt;
     }
@@ -378,7 +373,7 @@ class DocumentController extends Controller
             }
         }
 
-        DB::collection('document_' . $project_key)->where('_id', $id)->update([ 'name' => $name ]);
+        DB::collection('document_' . $project_key)->where('_id', $id)->update(['name' => $name]);
         $new_document = DB::collection('document_' . $project_key)->where('_id', $id)->first();
 
         return Response()->json(['ecode' => 0, 'data' => parent::arrange($new_document)]);
@@ -393,12 +388,12 @@ class DocumentController extends Controller
      */
     public function move(Request $request, $project_key)
     {
-        $id =  $request->input('id');
+        $id = $request->input('id');
         if (!isset($id) || !$id) {
             throw new \UnexpectedValueException('the move object can not be empty.', -11911);
         }
 
-        $dest_path =  $request->input('dest_path');
+        $dest_path = $request->input('dest_path');
         if (!isset($dest_path)) {
             throw new \UnexpectedValueException('the dest directory can not be empty.', -11912);
         }
@@ -494,13 +489,13 @@ class DocumentController extends Controller
             }
         }
 
-        DB::collection('document_' . $project_key)->where('_id', $id)->update([ 'del_flag' => 1 ]);
+        DB::collection('document_' . $project_key)->where('_id', $id)->update(['del_flag' => 1]);
 
         if (isset($document['d']) && $document['d'] === 1) {
-            DB::collection('document_' . $project_key)->whereRaw([ 'pt' => $id ])->update([ 'del_flag' => 1 ]);
+            DB::collection('document_' . $project_key)->whereRaw(['pt' => $id])->update(['del_flag' => 1]);
         }
 
-        return Response()->json(['ecode' => 0, 'data' => [ 'id' => $id ]]);
+        return Response()->json(['ecode' => 0, 'data' => ['id' => $id]]);
     }
 
     /**
@@ -548,7 +543,7 @@ class DocumentController extends Controller
         $data = [];
 
         $thumbnail_size = 190;
-        if (in_array($_FILES[$field]['type'], [ 'image/jpeg', 'image/jpg', 'image/png', 'image/gif' ])) {
+        if (in_array($_FILES[$field]['type'], ['image/jpeg', 'image/jpg', 'image/png', 'image/gif'])) {
             $size = getimagesize($filename);
             $width = $size[0];
             $height = $size[1];
@@ -603,13 +598,13 @@ class DocumentController extends Controller
         }
         $data['name'] = $fname . ($i < 2 ? '' : ('(' . $i . ')')) . $extname;
 
-        $data['pt']      = $this->getParentTree($project_key, $directory);
-        $data['parent']  = $directory;
-        $data['size']    = $_FILES[$field]['size'];
-        $data['type']    = $_FILES[$field]['type'];
-        $data['index']   = $basename;
+        $data['pt'] = $this->getParentTree($project_key, $directory);
+        $data['parent'] = $directory;
+        $data['size'] = $_FILES[$field]['size'];
+        $data['type'] = $_FILES[$field]['type'];
+        $data['index'] = $basename;
 
-        $data['uploader'] = [ 'id' => $this->user->id, 'name' => $this->user->first_name, 'email' => $this->user->email ];
+        $data['uploader'] = ['id' => $this->user->id, 'name' => $this->user->first_name, 'email' => $this->user->email];
         $data['uploaded_at'] = time();
 
         $id = DB::collection('document_' . $project_key)->insertGetId($data);
@@ -690,8 +685,8 @@ class DocumentController extends Controller
 
         $filename = $basepath . '/' . $name . '.zip';
 
-        Zipper::make($filename)->folder($name)->add($basepath . '/' . $name);
-        Zipper::close();
+        Madzipper::make($filename)->folder($name)->add($basepath . '/' . $name);
+        Madzipper::close();
 
         File::download($filename, $name . '.zip');
 

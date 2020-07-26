@@ -2,24 +2,21 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Foundation\Bus\DispatchesJobs;
-use Illuminate\Routing\Controller as BaseController;
-use Illuminate\Foundation\Validation\ValidatesRequests;
-use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
-use Illuminate\Foundation\Auth\Access\AuthorizesResources;
-
+use App\Acl\Acl;
 use App\Project\Eloquent\Project;
 use App\Project\Eloquent\Watch;
 use App\Project\Provider;
-use App\Acl\Acl;
-use Sentinel;
 use DB;
-
-use MongoDB\BSON\ObjectID;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
+use Illuminate\Foundation\Bus\DispatchesJobs;
+use Illuminate\Foundation\Validation\ValidatesRequests;
+use Illuminate\Routing\Controller as BaseController;
+use MongoDB\BSON\ObjectId;
+use Sentinel;
 
 class Controller extends BaseController
 {
-    use AuthorizesRequests, AuthorizesResources, DispatchesJobs, ValidatesRequests;
+    use AuthorizesRequests, DispatchesJobs, ValidatesRequests;
 
     public function __construct()
     {
@@ -50,17 +47,17 @@ class Controller extends BaseController
      * string $permission
      * @return bool
      */
-    public function isPermissionAllowed($project_key, $permission, $user_id='')
+    public function isPermissionAllowed($project_key, $permission, $user_id = '')
     {
         $uid = isset($user_id) && $user_id ? $user_id : $this->user->id;
 
         $isAllowed = Acl::isAllowed($uid, $permission, $project_key);
-        if (!$isAllowed && in_array($permission, [ 'view_project', 'manage_project' ])) {
+        if (!$isAllowed && in_array($permission, ['view_project', 'manage_project'])) {
             if ($this->user->email === 'admin@action.view') {
                 return true;
             }
 
-            $project = Project::where([ 'key' => $project_key ])->first();
+            $project = Project::where(['key' => $project_key])->first();
             if ($project && isset($project->principal) && isset($project->principal['id']) && $uid === $project->principal['id']) {
                 return true;
             }
@@ -73,7 +70,7 @@ class Controller extends BaseController
      *
      * @return true
      */
-    public function isFieldUsedByIssue($project_key, $field_key, $field, $ext_info='')
+    public function isFieldUsedByIssue($project_key, $field_key, $field, $ext_info = [])
     {
         if ($field['project_key'] !== $project_key) {
             return true;
@@ -89,9 +86,9 @@ class Controller extends BaseController
                     $projects = Project::all();
                     foreach ($projects as $project) {
                         $isUsed = DB::collection('issue_' . $project->key)
-                                      ->where($field_key, isset($field['key']) ? $field['key'] : $field['_id'])
-                                      ->where('del_flg', '<>', 1)
-                                      ->exists();
+                            ->where($field_key, isset($field['key']) ? $field['key'] : $field['_id'])
+                            ->where('del_flg', '<>', 1)
+                            ->exists();
                         if ($isUsed) {
                             return true;
                         }
@@ -144,20 +141,20 @@ class Controller extends BaseController
     public function getIssueQueryWhere($project_key, $query)
     {
         $special_fields = [
-            [ 'key' => 'no', 'type' => 'Number' ],
-            [ 'key' => 'type', 'type' => 'Select' ],
-            [ 'key' => 'state', 'type' => 'Select' ],
-            [ 'key' => 'assignee', 'type' => 'SingleUser' ],
-            [ 'key' => 'reporter', 'type' => 'SingleUser' ],
-            [ 'key' => 'resolver', 'type' => 'SingleUser' ],
-            [ 'key' => 'closer', 'type' => 'SingleUser' ],
+            ['key' => 'no', 'type' => 'Number'],
+            ['key' => 'type', 'type' => 'Select'],
+            ['key' => 'state', 'type' => 'Select'],
+            ['key' => 'assignee', 'type' => 'SingleUser'],
+            ['key' => 'reporter', 'type' => 'SingleUser'],
+            ['key' => 'resolver', 'type' => 'SingleUser'],
+            ['key' => 'closer', 'type' => 'SingleUser'],
 
-            [ 'key' => 'created_at', 'type' => 'Duration' ],
-            [ 'key' => 'updated_at', 'type' => 'Duration' ],
-            [ 'key' => 'resolved_at', 'type' => 'Duration' ],
-            [ 'key' => 'closed_at', 'type' => 'Duration' ],
+            ['key' => 'created_at', 'type' => 'Duration'],
+            ['key' => 'updated_at', 'type' => 'Duration'],
+            ['key' => 'resolved_at', 'type' => 'Duration'],
+            ['key' => 'closed_at', 'type' => 'Duration'],
 
-            [ 'key' => 'sprints', 'type' => 'Select' ],
+            ['key' => 'sprints', 'type' => 'Select'],
         ];
 
         $fields = Provider::getFieldList($project_key, ['key', 'name', 'type']);
@@ -174,10 +171,10 @@ class Controller extends BaseController
         $and = [];
         foreach ($where as $key => $val) {
             if ($key === 'no') {
-                $and[] = [ 'no' => intval($val) ];
+                $and[] = ['no' => intval($val)];
             } elseif ($key === 'title') {
                 if (is_numeric($val) && strpos($val, '.') === false) {
-                    $and[] = [ '$or' => [ [ 'no' => $val + 0 ], [ 'title'  => [ '$regex' => $val ] ] ] ];
+                    $and[] = ['$or' => [['no' => $val + 0], ['title' => ['$regex' => $val]]]];
                 } elseif (strpos($val, ',') !== false) {
                     $nos = explode(',', $val);
                     $new_nos = [];
@@ -186,86 +183,86 @@ class Controller extends BaseController
                             $new_nos[] = $no + 0;
                         }
                     }
-                    $and[] = [ '$or' => [ [ 'no' => [ '$in' => $new_nos ] ], [ 'title'  => [ '$regex' => $val ] ] ] ];
+                    $and[] = ['$or' => [['no' => ['$in' => $new_nos]], ['title' => ['$regex' => $val]]]];
                 } else {
-                    $and[] = [ 'title' => [ '$regex' => $val ] ];
+                    $and[] = ['title' => ['$regex' => $val]];
                 }
             } elseif ($key === 'sprints') {
-                $and[] = [ 'sprints' => $val + 0 ];
+                $and[] = ['sprints' => $val + 0];
             } elseif ($key_type_fields[$key] === 'SingleUser') {
                 $users = explode(',', $val);
                 if (in_array('me', $users)) {
                     array_push($users, $this->user->id);
                 }
-                $and[] = [ $key . '.' . 'id' => [ '$in' => $users ] ];
+                $and[] = [$key . '.' . 'id' => ['$in' => $users]];
             } elseif ($key_type_fields[$key] === 'MultiUser') {
                 $or = [];
                 $vals = explode(',', $val);
                 foreach ($vals as $v) {
-                    $or[] = [ $key . '_ids' => $v == 'me' ? $this->user->id : $v ];
+                    $or[] = [$key . '_ids' => $v == 'me' ? $this->user->id : $v];
                 }
-                $and[] = [ '$or' => $or ];
-            } elseif (in_array($key_type_fields[$key], [ 'Select', 'SingleVersion', 'RadioGroup' ])) {
-                $and[] = [ $key => [ '$in' => explode(',', $val) ] ];
-            } elseif (in_array($key_type_fields[$key], [ 'MultiSelect', 'MultiVersion', 'CheckboxGroup' ])) {
+                $and[] = ['$or' => $or];
+            } elseif (in_array($key_type_fields[$key], ['Select', 'SingleVersion', 'RadioGroup'])) {
+                $and[] = [$key => ['$in' => explode(',', $val)]];
+            } elseif (in_array($key_type_fields[$key], ['MultiSelect', 'MultiVersion', 'CheckboxGroup'])) {
                 $or = [];
                 $vals = explode(',', $val);
                 foreach ($vals as $v) {
-                    $or[] = [ $key => $v ];
+                    $or[] = [$key => $v];
                 }
-                $and[] = [ '$or' => $or ];
-            } elseif (in_array($key_type_fields[$key], [ 'Duration', 'DatePicker', 'DateTimePicker' ])) {
+                $and[] = ['$or' => $or];
+            } elseif (in_array($key_type_fields[$key], ['Duration', 'DatePicker', 'DateTimePicker'])) {
                 if (strpos($val, '~') !== false) {
                     $sections = explode('~', $val);
                     if ($sections[0]) {
-                        $and[] = [ $key => [ '$gte' => strtotime($sections[0]) ] ];
+                        $and[] = [$key => ['$gte' => strtotime($sections[0])]];
                     }
                     if ($sections[1]) {
-                        $and[] = [ $key => [ '$lte' => strtotime($sections[1] . ' 23:59:59') ] ];
+                        $and[] = [$key => ['$lte' => strtotime($sections[1] . ' 23:59:59')]];
                     }
-                } elseif (in_array($val, [ '0d', '0w', '0m', '0y' ])) {
+                } elseif (in_array($val, ['0d', '0w', '0m', '0y'])) {
                     if ($val == '0d') {
-                        $and[] = [ $key => [ '$gte' => strtotime(date('Y-m-d')), '$lte' => strtotime(date('Y-m-d') . ' 23:59:59') ] ];
+                        $and[] = [$key => ['$gte' => strtotime(date('Y-m-d')), '$lte' => strtotime(date('Y-m-d') . ' 23:59:59')]];
                     } elseif ($val == '0w') {
-                        $and[] = [ $key => [ '$gte' => mktime(0, 0, 0, date('m'), date('d') - date('w') + 1, date('Y')), '$lte' => mktime(23, 59, 59, date('m'), date('d') - date('w') + 7, date('Y')) ] ];
+                        $and[] = [$key => ['$gte' => mktime(0, 0, 0, date('m'), date('d') - date('w') + 1, date('Y')), '$lte' => mktime(23, 59, 59, date('m'), date('d') - date('w') + 7, date('Y'))]];
                     } elseif ($val == '0m') {
-                        $and[] = [ $key => [ '$gte' => mktime(0, 0, 0, date('m'), 1, date('Y')), '$lte' => mktime(23, 59, 59, date('m'), date('t'), date('Y')) ] ];
+                        $and[] = [$key => ['$gte' => mktime(0, 0, 0, date('m'), 1, date('Y')), '$lte' => mktime(23, 59, 59, date('m'), date('t'), date('Y'))]];
                     } else {
-                        $and[] = [ $key => [ '$gte' => mktime(0, 0, 0, 1, 1, date('Y')), '$lte' => mktime(23, 59, 59, 12, 31, date('Y')) ] ];
+                        $and[] = [$key => ['$gte' => mktime(0, 0, 0, 1, 1, date('Y')), '$lte' => mktime(23, 59, 59, 12, 31, date('Y'))]];
                     }
                 } else {
-                    $unitMap = [ 'w' => 'week', 'm' => 'month', 'y' => 'year' ];
+                    $unitMap = ['w' => 'week', 'm' => 'month', 'y' => 'year'];
                     $unit = substr($val, -1);
-                    if (in_array($unit, [ 'w', 'm', 'y' ])) {
+                    if (in_array($unit, ['w', 'm', 'y'])) {
                         $direct = substr($val, 0, 1);
                         $val = abs(substr($val, 0, -1));
                         if ($direct === '-') {
-                            $and[] = [ $key => [ '$lt' => strtotime(date('Ymd', strtotime('-' . $val . ' ' . $unitMap[$unit]))) ] ];
+                            $and[] = [$key => ['$lt' => strtotime(date('Ymd', strtotime('-' . $val . ' ' . $unitMap[$unit])))]];
                         } else {
-                            $and[] = [ $key => [ '$gte' => strtotime(date('Ymd', strtotime('-' . $val . ' ' . $unitMap[$unit]))) ] ];
+                            $and[] = [$key => ['$gte' => strtotime(date('Ymd', strtotime('-' . $val . ' ' . $unitMap[$unit])))]];
                         }
                     }
                 }
-            } elseif (in_array($key_type_fields[$key], [ 'Text', 'TextArea', 'Url' ])) {
-                $and[] = [ $key => [ '$regex' => $val ] ];
-            } elseif (in_array($key_type_fields[$key], [ 'Number', 'Integer' ])) {
+            } elseif (in_array($key_type_fields[$key], ['Text', 'TextArea', 'Url'])) {
+                $and[] = [$key => ['$regex' => $val]];
+            } elseif (in_array($key_type_fields[$key], ['Number', 'Integer'])) {
                 if (strpos($val, '~') !== false) {
                     $sections = explode('~', $val);
                     if ($sections[0]) {
-                        $and[] = [ $key => [ '$gte' => $sections[0] + 0 ] ];
+                        $and[] = [$key => ['$gte' => $sections[0] + 0]];
                     }
                     if ($sections[1]) {
-                        $and[] = [ $key => [ '$lte' => $sections[1] + 0 ] ];
+                        $and[] = [$key => ['$lte' => $sections[1] + 0]];
                     }
                 }
             } elseif ($key_type_fields[$key] === 'TimeTracking') {
                 if (strpos($val, '~') !== false) {
                     $sections = explode('~', $val);
                     if ($sections[0]) {
-                        $and[] = [ $key . '_m' => [ '$gte' => $this->ttHandleInM($sections[0]) ] ];
+                        $and[] = [$key . '_m' => ['$gte' => $this->ttHandleInM($sections[0])]];
                     }
                     if ($sections[1]) {
-                        $and[] = [ $key . '_m' => [ '$lte' => $this->ttHandleInM($sections[1]) ] ];
+                        $and[] = [$key . '_m' => ['$lte' => $this->ttHandleInM($sections[1])]];
                     }
                 }
             }
@@ -282,12 +279,12 @@ class Controller extends BaseController
 
             $watchedIds = [];
             foreach ($watched_issue_ids as $id) {
-                $watchedIds[] = new ObjectID($id);
+                $watchedIds[] = new ObjectId($id);
             }
-            $and[] = [ '_id' => [ '$in' => $watchedIds ] ];
+            $and[] = ['_id' => ['$in' => $watchedIds]];
         }
 
-        $and[] = [ 'del_flg' => [ '$ne' => 1 ] ];
-        return [ '$and' => $and ];
+        $and[] = ['del_flg' => ['$ne' => 1]];
+        return ['$and' => $and];
     }
 }

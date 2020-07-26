@@ -2,14 +2,11 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
-
-use App\Http\Requests;
 use App\Http\Controllers\Controller;
 use App\System\Eloquent\CalendarSingular;
-
-use App\Utils\Lunar;
 use App\Utils\CurlRequest;
+use App\Utils\Lunar;
+use Illuminate\Http\Request;
 
 class CalendarController extends Controller
 {
@@ -47,7 +44,7 @@ class CalendarController extends Controller
 
         $dates = $this->getYearDates(intval($year));
 
-        return Response()->json([ 'ecode' => 0, 'data' => $dates, 'options' => [ 'year' => date('Y'), 'date' => date('Y/m/d') ] ]);
+        return Response()->json(['ecode' => 0, 'data' => $dates, 'options' => ['year' => date('Y'), 'date' => date('Y/m/d')]]);
     }
 
     /**
@@ -123,7 +120,7 @@ class CalendarController extends Controller
                 $w = intval(date('w', strtotime($year . '-' . $i . '-' . $j)));
 
                 $dates[] = [
-                    'date' => $year . '/' . sprintf('%02d', $i) . '/'. sprintf('%02d', $j),
+                    'date' => $year . '/' . sprintf('%02d', $i) . '/' . sprintf('%02d', $j),
                     'year' => $year,
                     'month' => $i,
                     'day' => $j,
@@ -168,7 +165,7 @@ class CalendarController extends Controller
             if (!isset($type) || !$type) {
                 throw new \UnexpectedValueException('the setted type can not be empty.', -16025);
             }
-            if (!in_array($type, [ 'holiday', 'workday' ])) {
+            if (!in_array($type, ['holiday', 'workday'])) {
                 throw new \UnexpectedValueException('the setted type has error.', -16026);
             }
         }
@@ -180,12 +177,12 @@ class CalendarController extends Controller
                 CalendarSingular::create([
                     'date' => $date,
                     'year' => intval(substr($date, 0, 4)),
-                    'type' => $type
+                    'type' => $type,
                 ]);
             }
         }
 
-        return Response()->json([ 'ecode' => 0, 'data' => $this->getYearDates(intval(substr($start_date, 0, 4)))]);
+        return Response()->json(['ecode' => 0, 'data' => $this->getYearDates(intval(substr($start_date, 0, 4)))]);
     }
 
     /**
@@ -221,10 +218,10 @@ class CalendarController extends Controller
             CalendarSingular::create([
                 'date' => $value['date'],
                 'year' => $year,
-                'type' => isset($value['holiday']) && $value['holiday'] ? 'holiday' : 'workday'
-                ]);
+                'type' => isset($value['holiday']) && $value['holiday'] ? 'holiday' : 'workday',
+            ]);
         }
 
-        return Response()->json([ 'ecode' => 0, 'data' => $this->getYearDates($year) ]);
+        return Response()->json(['ecode' => 0, 'data' => $this->getYearDates($year)]);
     }
 }

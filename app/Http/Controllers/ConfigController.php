@@ -2,15 +2,9 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Event;
-
-use App\Http\Requests;
-use App\Http\Controllers\Controller;
-
-use DB;
-use App\Project\Provider;
 use App\Acl\Eloquent\RolePermissions;
+use App\Http\Controllers\Controller;
+use App\Project\Provider;
 
 class ConfigController extends Controller
 {
@@ -38,7 +32,7 @@ class ConfigController extends Controller
             $role->permissions = $this->getPermissions($project_key, $role->id);
         }
 
-        return Response()->json([ 'ecode' => 0, 'data' => [ 'types' => $new_types, 'roles' => $roles, 'priorities' => $priorities ] ]);
+        return Response()->json(['ecode' => 0, 'data' => ['types' => $new_types, 'roles' => $roles, 'priorities' => $priorities]]);
     }
 
     /**
@@ -50,9 +44,9 @@ class ConfigController extends Controller
      */
     public function getPermissions($project_key, $role_id)
     {
-        $rp = RolePermissions::where([ 'project_key' => $project_key, 'role_id' => $role_id ])->first();
+        $rp = RolePermissions::where(['project_key' => $project_key, 'role_id' => $role_id])->first();
         if (!$rp && $project_key !== '$_sys_$') {
-            $rp = RolePermissions::where([ 'project_key' => '$_sys_$', 'role_id' => $role_id ])->first();
+            $rp = RolePermissions::where(['project_key' => '$_sys_$', 'role_id' => $role_id])->first();
         }
         return $rp && isset($rp->permissions) ? $rp->permissions : [];
     }

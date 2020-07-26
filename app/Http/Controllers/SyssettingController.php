@@ -2,18 +2,13 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
-
-use App\Http\Requests;
 use App\Http\Controllers\Controller;
-
 use App\System\Eloquent\SysSetting;
-use Sentinel;
-
-use Mail;
 use Config;
-
 use Exception;
+use Illuminate\Http\Request;
+use Mail;
+use Sentinel;
 
 class SyssettingController extends Controller
 {
@@ -38,7 +33,7 @@ class SyssettingController extends Controller
             && $syssetting['mailserver']['smtp']['password']) {
             $syssetting['mailserver']['smtp']['password'] = '******';
         }
-        return Response()->json([ 'ecode' => 0, 'data' => $syssetting ]);
+        return Response()->json(['ecode' => 0, 'data' => $syssetting]);
     }
 
     /**
@@ -63,12 +58,12 @@ class SyssettingController extends Controller
             if (!isset($smtp['password']) || !$smtp['password']) {
                 $smtp['password'] = $mailserver && isset($mailserver['smtp']) && isset($mailserver['smtp']['password']) ? $mailserver['smtp']['password'] : '';
             }
-            $updValues['mailserver'] = array_merge($mailserver, [ 'smtp' => $smtp ]);
+            $updValues['mailserver'] = array_merge($mailserver, ['smtp' => $smtp]);
         }
 
         $mail_send = $request->input('mail_send');
         if (isset($mail_send)) {
-            $updValues['mailserver'] = array_merge($mailserver, [ 'send' => $mail_send ]);
+            $updValues['mailserver'] = array_merge($mailserver, ['send' => $mail_send]);
         }
 
         $sysroles = $request->input('sysroles');
@@ -129,10 +124,10 @@ class SyssettingController extends Controller
         }
 
         $syssetting = SysSetting::first();
-        $syssetting->smtp = array_merge($syssetting->smtp, [ 'send_auth_pwd' => $pwd ]);
+        $syssetting->smtp = array_merge($syssetting->smtp, ['send_auth_pwd' => $pwd]);
         $syssetting->save();
 
-        return Response()->json([ 'ecode' => 0, 'data' => SysSetting::first() ]);
+        return Response()->json(['ecode' => 0, 'data' => SysSetting::first()]);
     }
 
     /**
@@ -175,7 +170,7 @@ class SyssettingController extends Controller
         $prefix = isset($syssetting['mailserver']['send']['prefix']) && $syssetting['mailserver']['send']['prefix'] ? $syssetting['mailserver']['send']['prefix'] : 'ActionView';
 
         $contents = $request->input('contents') ?: '';
-        $data = [ 'contents' => $contents ];
+        $data = ['contents' => $contents];
 
         $subject = '[' . $prefix . ']' . $subject;
 
@@ -189,7 +184,7 @@ class SyssettingController extends Controller
             throw new Exception('send mail failed.', -15200);
         }
 
-        return Response()->json([ 'ecode' => 0, 'data' => '' ]);
+        return Response()->json(['ecode' => 0, 'data' => '']);
     }
 
     /**

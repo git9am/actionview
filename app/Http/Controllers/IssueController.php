@@ -1,39 +1,32 @@
 <?php
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Event;
 use App\Events\IssueEvent;
 use App\Events\VersionEvent;
-
-use App\Http\Requests;
 use App\Http\Controllers\Controller;
-use App\Project\Provider;
+use App\Project\Eloquent\Board;
+use App\Project\Eloquent\BoardRankMap;
 use App\Project\Eloquent\File;
-use App\Project\Eloquent\Watch;
+use App\Project\Eloquent\Labels;
+use App\Project\Eloquent\Linked;
+use App\Project\Eloquent\ProjectIssueListColumns;
+use App\Project\Eloquent\Sprint;
 use App\Project\Eloquent\UserIssueFilters;
 use App\Project\Eloquent\UserIssueListColumns;
-use App\Project\Eloquent\ProjectIssueListColumns;
-use App\Project\Eloquent\Linked;
-use App\Project\Eloquent\Worklog;
 use App\Project\Eloquent\Version;
-
-use App\Project\Eloquent\Board;
-use App\Project\Eloquent\Sprint;
-use App\Project\Eloquent\BoardRankMap;
-
-use App\Project\Eloquent\Labels;
-
-use App\Workflow\Workflow;
-use App\System\Eloquent\SysSetting;
+use App\Project\Eloquent\Watch;
+use App\Project\Eloquent\Worklog;
+use App\Project\Provider;
 use App\System\Eloquent\CalendarSingular;
+use App\System\Eloquent\SysSetting;
+use App\Workflow\Workflow;
 use Cartalyst\Sentinel\Users\EloquentUser;
-use Sentinel;
 use DB;
 use Exception;
-
-use MongoDB\BSON\ObjectID;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Event;
 use Maatwebsite\Excel\Facades\Excel;
+use Sentinel;
 
 class IssueController extends Controller
 {
@@ -51,7 +44,7 @@ class IssueController extends Controller
 
         $from = $request->input('from');
         $from_kanban_id = $request->input('from_kanban_id');
-        if (isset($from) && in_array($from, [ 'kanban', 'active_sprint', 'backlog' ]) && isset($from_kanban_id) && $from_kanban_id) {
+        if (isset($from) && in_array($from, ['kanban', 'active_sprint', 'backlog']) && isset($from_kanban_id) && $from_kanban_id) {
             $board = Board::find($from_kanban_id);
             if ($board && isset($board->query) && $board->query) {
                 $global_query = $this->getIssueQueryWhere($project_key, $board->query);
@@ -60,13 +53,13 @@ class IssueController extends Controller
 
             if ($from === 'kanban') {
                 $query->where(function ($query) {
-                    $query->whereRaw([ 'resolve_version' => [ '$exists' => 0 ] ])->orWhere('resolve_version', '');
+                    $query->whereRaw(['resolve_version' => ['$exists' => 0]])->orWhere('resolve_version', '');
                 });
             } elseif ($from === 'active_sprint' || $from === 'backlog') {
                 $active_sprint_issues = [];
                 $active_sprint = Sprint::where('project_key', $project_key)->where('status', 'active')->first();
                 if ($from === 'active_sprint' && !$active_sprint) {
-                    Response()->json([ 'ecode' => 0, 'data' => []]);
+                    Response()->json(['ecode' => 0, 'data' => []]);
                 } elseif ($active_sprint && isset($active_sprint['issues']) && $active_sprint['issues']) {
                     $active_sprint_issues = $active_sprint['issues'];
                 }
@@ -79,9 +72,9 @@ class IssueController extends Controller
                         $last_column_states = $last_column['states'];
                     }
                 }
- 
+
                 $query->where(function ($query) use ($last_column_states, $active_sprint_issues) {
-                    $query->whereRaw([ 'state' => [ '$nin' => $last_column_states ] ])->orWhereIn('no', $active_sprint_issues);
+                    $query->whereRaw(['state' => ['$nin' => $last_column_states]])->orWhereIn('no', $active_sprint_issues);
                 });
             }
         }
@@ -138,7 +131,7 @@ class IssueController extends Controller
                     $issues[$key]['parent'] = $cache_parents[$issue['parent_id']];
                 } else {
                     $parent = DB::collection('issue_' . $project_key)->where('_id', $issue['parent_id'])->first();
-                    $issues[$key]['parent'] = $parent ? array_only($parent, [ '_id', 'title', 'no', 'type', 'state' ]) : [];
+                    $issues[$key]['parent'] = $parent ? array_only($parent, ['_id', 'title', 'no', 'type', 'state']) : [];
                     $cache_parents[$issue['parent_id']] = $issues[$key]['parent'];
                 }
             }
@@ -148,12 +141,12 @@ class IssueController extends Controller
             }
         }
 
-        if ($issues && isset($from) && in_array($from, [ 'kanban', 'active_sprint', 'backlog', 'his_sprint' ])) {
+        if ($issues && isset($from) && in_array($from, ['kanban', 'active_sprint', 'backlog', 'his_sprint'])) {
             $filter = $request->input('filter') ?: '';
             $issues = $this->arrangeIssues($project_key, $issues, $from, $from_kanban_id, $filter === 'all');
         }
 
-        $options = [ 'total' => $total, 'sizePerPage' => $page_size ];
+        $options = ['total' => $total, 'sizePerPage' => $page_size];
 
         if (isset($from) && $from == 'gantt') {
             foreach ($issues as $key => $issue) {
@@ -178,7 +171,7 @@ class IssueController extends Controller
             $options['today'] = date('Y/m/d');
         }
 
-        return Response()->json([ 'ecode' => 0, 'data' => parent::arrange($issues), 'options' => $options ]);
+        return Response()->json(['ecode' => 0, 'data' => parent::arrange($issues), 'options' => $options]);
     }
 
     /**
@@ -221,7 +214,7 @@ class IssueController extends Controller
 
         $query->take($limit)->orderBy('created_at', 'desc');
         $issues = $query->get();
-        return Response()->json([ 'ecode' => 0, 'data' => parent::arrange($issues) ]);
+        return Response()->json(['ecode' => 0, 'data' => parent::arrange($issues)]);
     }
 
     /**
@@ -267,7 +260,7 @@ class IssueController extends Controller
             } elseif ($field['type'] == 'SingleUser') {
                 $user_info = Sentinel::findById($fieldValue);
                 if ($user_info) {
-                    $insValues[$field['key']] = [ 'id' => $fieldValue, 'name' => $user_info->first_name, 'email' => $user_info->email ];
+                    $insValues[$field['key']] = ['id' => $fieldValue, 'name' => $user_info->first_name, 'email' => $user_info->email];
                 }
             } elseif ($field['type'] == 'MultiUser') {
                 $user_ids = $fieldValue;
@@ -276,7 +269,7 @@ class IssueController extends Controller
                 foreach ($user_ids as $uid) {
                     $user_info = Sentinel::findById($uid);
                     if ($user_info) {
-                        array_push($insValues[$field['key']], [ 'id' => $uid, 'name' => $user_info->first_name, 'email' => $user_info->email ]);
+                        array_push($insValues[$field['key']], ['id' => $uid, 'name' => $user_info->first_name, 'email' => $user_info->email]);
                         $new_user_ids[] = $uid;
                     }
                 }
@@ -308,11 +301,11 @@ class IssueController extends Controller
 
             $user_info = Sentinel::findById($assignee_id);
             if ($user_info) {
-                $assignee = [ 'id' => $assignee_id, 'name' => $user_info->first_name, 'email' => $user_info->email ];
+                $assignee = ['id' => $assignee_id, 'name' => $user_info->first_name, 'email' => $user_info->email];
             }
         }
         if (!$assignee) {
-            $assignee = [ 'id' => $this->user->id, 'name' => $this->user->first_name, 'email' => $this->user->email ];
+            $assignee = ['id' => $this->user->id, 'name' => $this->user->first_name, 'email' => $this->user->email];
         }
         $insValues['assignee'] = $assignee;
 
@@ -328,7 +321,7 @@ class IssueController extends Controller
         }
 
         // get reporter(creator)
-        $insValues['reporter'] = [ 'id' => $this->user->id, 'name' => $this->user->first_name, 'email' => $this->user->email ];
+        $insValues['reporter'] = ['id' => $this->user->id, 'name' => $this->user->first_name, 'email' => $this->user->email];
         $insValues['created_at'] = time();
 
         $table = 'issue_' . $project_key;
@@ -349,7 +342,7 @@ class IssueController extends Controller
         // add to histroy table
         Provider::snap2His($project_key, $id, $schema);
         // trigger event of issue created
-        Event::fire(new IssueEvent($project_key, $id->__toString(), $insValues['reporter'], [ 'event_key' => 'create_issue' ]));
+        Event::fire(new IssueEvent($project_key, $id->__toString(), $insValues['reporter'], ['event_key' => 'create_issue']));
 
         // create the Labels for project
         if (isset($insValues['labels']) && $insValues['labels']) {
@@ -370,7 +363,7 @@ class IssueController extends Controller
         // get workflow definition
         $wf_definition = Provider::getWorkflowByType($type);
         // create and start workflow instacne
-        $wf_entry = Workflow::createInstance($wf_definition->id, $this->user->id)->start([ 'caller' => $this->user->id ]);
+        $wf_entry = Workflow::createInstance($wf_definition->id, $this->user->id)->start(['caller' => $this->user->id]);
         // get the inital step
         $initial_step = $wf_entry->getCurrentSteps()->first();
         $initial_state = $wf_entry->getStepMeta($initial_step->step_id, 'state');
@@ -414,7 +407,7 @@ class IssueController extends Controller
         if (isset($issue['entry_id']) && $issue['entry_id']) {
             try {
                 $wf = new Workflow($issue['entry_id']);
-                $issue['wfactions'] = $wf->getAvailableActions([ 'project_key' => $project_key, 'issue_id' => $id, 'caller' => $this->user->id ]);
+                $issue['wfactions'] = $wf->getAvailableActions(['project_key' => $project_key, 'issue_id' => $id, 'caller' => $this->user->id]);
             } catch (Exception $e) {
                 $issue['wfactions'] = [];
             }
@@ -455,7 +448,7 @@ class IssueController extends Controller
         }
 
         $issue['watchers'] = array_column(Watch::where('issue_id', $id)->orderBy('_id', 'desc')->get()->toArray(), 'user');
-        
+
         if (Watch::where('issue_id', $id)->where('user.id', $this->user->id)->exists()) {
             $issue['watching'] = true;
         }
@@ -495,7 +488,7 @@ class IssueController extends Controller
         $issue = DB::collection('issue_' . $project_key)->where('_id', $id)->first();
 
         $wf = new Workflow($issue['entry_id']);
-        $wfactions = $wf->getAvailableActions([ 'project_key' => $project_key, 'issue_id' => $id, 'caller' => $this->user->id ], true);
+        $wfactions = $wf->getAvailableActions(['project_key' => $project_key, 'issue_id' => $id, 'caller' => $this->user->id], true);
         foreach ($wfactions as $key => $action) {
             if (isset($action['screen']) && $action['screen']) {
                 $wfactions[$key]['schema'] = Provider::getSchemaByScreenId($project_key, $issue['type'], $action['screen']);
@@ -532,12 +525,12 @@ class IssueController extends Controller
         // get project labels
         $labels = Provider::getLabelOptions($project_key);
         // get project types
-        $types = Provider::getTypeListExt($project_key, [ 'user' => $users, 'assignee' => $assignees, 'state' => $states, 'resolution' => $resolutions, 'priority' => $priorities, 'version' => $versions, 'module' => $modules, 'epic' => $epics, 'labels' => $labels ]);
+        $types = Provider::getTypeListExt($project_key, ['user' => $users, 'assignee' => $assignees, 'state' => $states, 'resolution' => $resolutions, 'priority' => $priorities, 'version' => $versions, 'module' => $modules, 'epic' => $epics, 'labels' => $labels]);
         // get project sprints
         $new_sprints = [];
         $sprints = Provider::getSprintList($project_key);
         foreach ($sprints as $sprint) {
-            $new_sprints[] = [ 'no' => $sprint['no'], 'name' => $sprint['name'] ];
+            $new_sprints[] = ['no' => $sprint['no'], 'name' => $sprint['name']];
         }
         // get defined fields
         $fields = Provider::getFieldList($project_key);
@@ -568,8 +561,8 @@ class IssueController extends Controller
                 'display_columns' => $display_columns,
                 'timetrack' => $timetrack,
                 'relations' => $relations,
-                'fields' => $fields
-            ])
+                'fields' => $fields,
+            ]),
         ]);
     }
 
@@ -605,7 +598,7 @@ class IssueController extends Controller
                 return Response()->json(['ecode' => -11117, 'emsg' => 'the current user has not assigned-issue permission.']);
             }
 
-            $assignee = [ 'id' => $this->user->id, 'name' => $this->user->first_name, 'email' => $this->user->email ];
+            $assignee = ['id' => $this->user->id, 'name' => $this->user->first_name, 'email' => $this->user->email];
             $updValues['assignee'] = $assignee;
         } else {
             if (!$this->isPermissionAllowed($project_key, 'assigned_issue', $assignee_id)) {
@@ -614,7 +607,7 @@ class IssueController extends Controller
 
             $user_info = Sentinel::findById($assignee_id);
             if ($user_info) {
-                $assignee = [ 'id' => $assignee_id, 'name' => $user_info->first_name, 'email' => $user_info->email ];
+                $assignee = ['id' => $assignee_id, 'name' => $user_info->first_name, 'email' => $user_info->email];
                 $updValues['assignee'] = $assignee;
             }
         }
@@ -624,14 +617,14 @@ class IssueController extends Controller
             return $this->show($project_key, $id);
         }
 
-        $updValues['modifier'] = [ 'id' => $this->user->id, 'name' => $this->user->first_name, 'email' => $this->user->email ];
+        $updValues['modifier'] = ['id' => $this->user->id, 'name' => $this->user->first_name, 'email' => $this->user->email];
         $updValues['updated_at'] = time();
         DB::collection($table)->where('_id', $id)->update($updValues);
 
         // add to histroy table
-        $snap_id = Provider::snap2His($project_key, $id, null, [ 'assignee' ]);
+        $snap_id = Provider::snap2His($project_key, $id, null, ['assignee']);
         // trigger event of issue edited
-        Event::fire(new IssueEvent($project_key, $id, $updValues['modifier'], [ 'event_key' => 'assign_issue', 'data' => [ 'old_user' => $issue['assignee'], 'new_user' => $assignee ] ]));
+        Event::fire(new IssueEvent($project_key, $id, $updValues['modifier'], ['event_key' => 'assign_issue', 'data' => ['old_user' => $issue['assignee'], 'new_user' => $assignee]]));
 
         return $this->show($project_key, $id);
     }
@@ -663,14 +656,14 @@ class IssueController extends Controller
 
         $updValues['labels'] = $labels;
 
-        $updValues['modifier'] = [ 'id' => $this->user->id, 'name' => $this->user->first_name, 'email' => $this->user->email ];
+        $updValues['modifier'] = ['id' => $this->user->id, 'name' => $this->user->first_name, 'email' => $this->user->email];
         $updValues['updated_at'] = time();
         DB::collection($table)->where('_id', $id)->update($updValues);
 
         // add to histroy table
-        $snap_id = Provider::snap2His($project_key, $id, null, [ 'labels' ]);
+        $snap_id = Provider::snap2His($project_key, $id, null, ['labels']);
         // trigger event of issue edited
-        Event::fire(new IssueEvent($project_key, $id, $updValues['modifier'], [ 'event_key' => 'edit_issue', 'snap_id' => $snap_id ]));
+        Event::fire(new IssueEvent($project_key, $id, $updValues['modifier'], ['event_key' => 'edit_issue', 'snap_id' => $snap_id]));
         // create the Labels for project
         if ($labels) {
             $this->createLabels($project_key, $labels);
@@ -698,7 +691,7 @@ class IssueController extends Controller
         // get uncreated labels
         $new_labels = array_diff($labels, $created_labels);
         foreach ($new_labels as $label) {
-            Labels::create([ 'project_key' => $project_key, 'name' => $label ]);
+            Labels::create(['project_key' => $project_key, 'name' => $label]);
         }
         return true;
     }
@@ -711,7 +704,7 @@ class IssueController extends Controller
      * @param  string $mode
      * @return bool
      */
-    public function requiredCheck($schema, $data, $mode='create')
+    public function requiredCheck($schema, $data, $mode = 'create')
     {
         foreach ($schema as $field) {
             if (isset($field['required']) && $field['required']) {
@@ -750,9 +743,9 @@ class IssueController extends Controller
      * @param  array $schema
      * @return array
      */
-    public function getValidKeysBySchema($schema=[])
+    public function getValidKeysBySchema($schema = [])
     {
-        $valid_keys = array_merge(array_column($schema, 'key'), [ 'type', 'assignee', 'labels', 'parent_id', 'resolution', 'priority', 'progress', 'expect_start_time', 'expect_compete_time' ]);
+        $valid_keys = array_merge(array_column($schema, 'key'), ['type', 'assignee', 'labels', 'parent_id', 'resolution', 'priority', 'progress', 'expect_start_time', 'expect_compete_time']);
 
         foreach ($schema as $field) {
             if ($field['type'] == 'MultiUser') {
@@ -820,7 +813,7 @@ class IssueController extends Controller
             } elseif ($field['type'] == 'SingleUser') {
                 $user_info = Sentinel::findById($fieldValue);
                 if ($user_info) {
-                    $updValues[$field['key']] = [ 'id' => $fieldValue, 'name' => $user_info->first_name, 'email' => $user_info->email ];
+                    $updValues[$field['key']] = ['id' => $fieldValue, 'name' => $user_info->first_name, 'email' => $user_info->email];
                 }
             } elseif ($field['type'] == 'MultiUser') {
                 $user_ids = $fieldValue;
@@ -829,7 +822,7 @@ class IssueController extends Controller
                 foreach ($user_ids as $uid) {
                     $user_info = Sentinel::findById($uid);
                     if ($user_info) {
-                        array_push($updValues[$field['key']], [ 'id' => $uid, 'name' => $user_info->first_name, 'email' => $user_info->email ]);
+                        array_push($updValues[$field['key']], ['id' => $uid, 'name' => $user_info->first_name, 'email' => $user_info->email]);
                     }
                     $new_user_ids[] = $uid;
                 }
@@ -845,7 +838,7 @@ class IssueController extends Controller
 
             $user_info = Sentinel::findById($assignee_id);
             if ($user_info) {
-                $assignee = [ 'id' => $assignee_id, 'name' => $user_info->first_name, 'email' => $user_info->email ];
+                $assignee = ['id' => $assignee_id, 'name' => $user_info->first_name, 'email' => $user_info->email];
                 $updValues['assignee'] = $assignee;
             }
         }
@@ -856,7 +849,7 @@ class IssueController extends Controller
             return $this->show($project_key, $id);
         }
 
-        $updValues['modifier'] = [ 'id' => $this->user->id, 'name' => $this->user->first_name, 'email' => $this->user->email ];
+        $updValues['modifier'] = ['id' => $this->user->id, 'name' => $this->user->first_name, 'email' => $this->user->email];
         $updValues['updated_at'] = time();
 
         DB::collection($table)->where('_id', $id)->update($updValues);
@@ -864,7 +857,7 @@ class IssueController extends Controller
         // add to histroy table
         $snap_id = Provider::snap2His($project_key, $id, $schema, array_keys(array_only($request->all(), $valid_keys)));
         // trigger event of issue edited
-        Event::fire(new IssueEvent($project_key, $id, $updValues['modifier'], [ 'event_key' => 'edit_issue', 'snap_id' => $snap_id ]));
+        Event::fire(new IssueEvent($project_key, $id, $updValues['modifier'], ['event_key' => 'edit_issue', 'snap_id' => $snap_id]));
         // create the Labels for project
         if (isset($updValues['labels']) && $updValues['labels']) {
             $this->createLabels($project_key, $updValues['labels']);
@@ -891,9 +884,9 @@ class IssueController extends Controller
             throw new \UnexpectedValueException('the issue does not exist or is not in the project.', -11103);
         }
 
-        $user = [ 'id' => $this->user->id, 'name' => $this->user->first_name, 'email' => $this->user->email ];
-        
-        $ids = [ $id ];
+        $user = ['id' => $this->user->id, 'name' => $this->user->first_name, 'email' => $this->user->email];
+
+        $ids = [$id];
         // delete all subtasks of this issue
         $subtasks = DB::collection('issue_' . $project_key)
             ->where('parent_id', $id)
@@ -901,23 +894,23 @@ class IssueController extends Controller
             ->get();
         foreach ($subtasks as $subtask) {
             $sub_id = $subtask['_id']->__toString();
-            DB::collection($table)->where('_id', $sub_id)->update([ 'del_flg' => 1 ]);
+            DB::collection($table)->where('_id', $sub_id)->update(['del_flg' => 1]);
 
             // delete linked relation
             DB::collection('linked')->where('src', $sub_id)->orWhere('dest', $sub_id)->delete();
 
-            Event::fire(new IssueEvent($project_key, $sub_id, $user, [ 'event_key' => 'del_issue' ]));
+            Event::fire(new IssueEvent($project_key, $sub_id, $user, ['event_key' => 'del_issue']));
             $ids[] = $sub_id;
         }
 
         // delete linked relation
         DB::collection('linked')->where('src', $id)->orWhere('dest', $id)->delete();
         // delete this issue
-        DB::collection($table)->where('_id', $id)->update([ 'del_flg' => 1 ]);
+        DB::collection($table)->where('_id', $id)->update(['del_flg' => 1]);
         // trigger event of issue deleted
-        Event::fire(new IssueEvent($project_key, $id, $user, [ 'event_key' => 'del_issue' ]));
+        Event::fire(new IssueEvent($project_key, $id, $user, ['event_key' => 'del_issue']));
 
-        return Response()->json(['ecode' => 0, 'data' => [ 'ids' => $ids ]]);
+        return Response()->json(['ecode' => 0, 'data' => ['ids' => $ids]]);
     }
 
     /**
@@ -928,7 +921,7 @@ class IssueController extends Controller
      */
     public function getIssueFilters($project_key)
     {
-        return Response()->json([ 'ecode' => 0, 'data' => Provider::getIssueFilters($project_key, $this->user->id) ]);
+        return Response()->json(['ecode' => 0, 'data' => Provider::getIssueFilters($project_key, $this->user->id)]);
     }
 
     /**
@@ -944,12 +937,12 @@ class IssueController extends Controller
             throw new \UnexpectedValueException('the name can not be empty.', -11105);
         }
 
-        if (UserIssueFilters::whereRaw([ 'name' => $name, 'user' => $this->user->id, 'project_key' => $project_key ])->exists()) {
+        if (UserIssueFilters::whereRaw(['name' => $name, 'user' => $this->user->id, 'project_key' => $project_key])->exists()) {
             throw new \UnexpectedValueException('filter name cannot be repeated', -11106);
         }
 
         $query = $request->input('query') ?: [];
-        
+
         $res = UserIssueFilters::where('project_key', $project_key)
             ->where('user', $this->user->id)
             ->first();
@@ -960,7 +953,7 @@ class IssueController extends Controller
                     throw new \UnexpectedValueException('filter name cannot be repeated', -11106);
                 }
             }
-            array_push($filters, [ 'id' => md5(microtime()), 'name' => $name, 'query' => $query ]);
+            array_push($filters, ['id' => md5(microtime()), 'name' => $name, 'query' => $query]);
             $res->filters = $filters;
             $res->save();
         } else {
@@ -970,8 +963,8 @@ class IssueController extends Controller
                     throw new \UnexpectedValueException('filter name cannot be repeated', -11106);
                 }
             }
-            array_push($filters, [ 'id' => md5(microtime()), 'name' => $name, 'query' => $query ]);
-            UserIssueFilters::create([ 'project_key' => $project_key, 'user' => $this->user->id, 'filters' => $filters ]);
+            array_push($filters, ['id' => md5(microtime()), 'name' => $name, 'query' => $query]);
+            UserIssueFilters::create(['project_key' => $project_key, 'user' => $this->user->id, 'filters' => $filters]);
         }
         return $this->getIssueFilters($project_key);
     }
@@ -999,7 +992,7 @@ class IssueController extends Controller
      */
     public function getDisplayColumns($project_key)
     {
-        return Response()->json([ 'ecode' => 0, 'data' => Provider::getIssueDisplayColumns($project_key, $this->user->id) ]);
+        return Response()->json(['ecode' => 0, 'data' => Provider::getIssueDisplayColumns($project_key, $this->user->id)]);
     }
 
     /**
@@ -1018,7 +1011,7 @@ class IssueController extends Controller
         if ($delete_from_project && $this->isPermissionAllowed($project_key, 'manage_project')) {
             ProjectIssueListColumns::where('project_key', $project_key)->delete();
         }
- 
+
         return $this->getDisplayColumns($project_key);
     }
 
@@ -1042,7 +1035,7 @@ class IssueController extends Controller
                 continue;
             }
             $column_keys[] = $column['key'];
-            $new_columns[] = array_only($column, [ 'key', 'width' ]);
+            $new_columns[] = array_only($column, ['key', 'width']);
         }
 
         $res = UserIssueListColumns::where('project_key', $project_key)
@@ -1053,7 +1046,7 @@ class IssueController extends Controller
             $res->column_keys = $column_keys;
             $res->save();
         } else {
-            UserIssueListColumns::create([ 'project_key' => $project_key, 'user' => $this->user->id, 'column_keys' => $column_keys, 'columns' => $new_columns ]);
+            UserIssueListColumns::create(['project_key' => $project_key, 'user' => $this->user->id, 'column_keys' => $column_keys, 'columns' => $new_columns]);
         }
 
         $save_for_project = $request->input('save_for_project') ?: false;
@@ -1064,7 +1057,7 @@ class IssueController extends Controller
                 $res->column_keys = $column_keys;
                 $res->save();
             } else {
-                ProjectIssueListColumns::create([ 'project_key' => $project_key, 'column_keys' => $column_keys, 'columns' => $new_columns ]);
+                ProjectIssueListColumns::create(['project_key' => $project_key, 'column_keys' => $column_keys, 'columns' => $new_columns]);
             }
         }
 
@@ -1088,7 +1081,7 @@ class IssueController extends Controller
             if ($res) {
                 $old_filters = isset($res->filters) ? $res->filters : [];
             }
-            
+
             $new_filters = [];
             foreach ($sequence as $id) {
                 foreach ($old_filters as $filter) {
@@ -1102,7 +1095,7 @@ class IssueController extends Controller
                 $res->filters = $new_filters;
                 $res->save();
             } else {
-                UserIssueFilters::create([ 'project_key' => $project_key, 'user' => $this->user->id, 'filters' => $new_filters ]);
+                UserIssueFilters::create(['project_key' => $project_key, 'user' => $this->user->id, 'filters' => $new_filters]);
             }
         }
         return $this->getIssueFilters($project_key);
@@ -1136,7 +1129,7 @@ class IssueController extends Controller
         $records = DB::collection('issue_his_' . $project_key)->where('issue_id', $id)->orderBy('_id', 'asc')->get();
         foreach ($records as $i => $item) {
             if ($i == 0) {
-                $changedRecords[] = [ 'operation' => 'create', 'operator' => $item['operator'], 'operated_at' => $item['operated_at'] ];
+                $changedRecords[] = ['operation' => 'create', 'operator' => $item['operator'], 'operated_at' => $item['operated_at']];
             } else {
                 $changed_items = [];
                 $changed_items['operation'] = 'modify';
@@ -1213,7 +1206,7 @@ class IssueController extends Controller
             $changedRecords = array_reverse($changedRecords);
         }
 
-        return Response()->json([ 'ecode' => 0, 'data' => $changedRecords, 'options' => [ 'current_time' => time() ] ]);
+        return Response()->json(['ecode' => 0, 'data' => $changedRecords, 'options' => ['current_time' => time()]]);
     }
 
     /**
@@ -1233,7 +1226,7 @@ class IssueController extends Controller
 
         try {
             $entry = new Workflow($workflow_id);
-            $entry->doAction($action_id, [ 'project_key' => $project_key, 'issue_id' => $id, 'caller' => $this->user->id ] + array_only($request->all(), [ 'comments' ]));
+            $entry->doAction($action_id, ['project_key' => $project_key, 'issue_id' => $id, 'caller' => $this->user->id] + array_only($request->all(), ['comments']));
         } catch (Exception $e) {
             throw new Exception('the executed action has error.', -11115);
         }
@@ -1251,19 +1244,19 @@ class IssueController extends Controller
     {
         Watch::where('issue_id', $id)->where('user.id', $this->user->id)->delete();
 
-        $cur_user = [ 'id' => $this->user->id, 'name' => $this->user->first_name, 'email' => $this->user->email ];
+        $cur_user = ['id' => $this->user->id, 'name' => $this->user->first_name, 'email' => $this->user->email];
 
         $flag = $request->input('flag');
         if (isset($flag) && $flag) {
-            Watch::create([ 'project_key' => $project_key, 'issue_id' => $id, 'user' => $cur_user ]);
+            Watch::create(['project_key' => $project_key, 'issue_id' => $id, 'user' => $cur_user]);
             // trigger event of issue watched
-            Event::fire(new IssueEvent($project_key, $id, $cur_user, [ 'event_key' => 'watched_issue' ]));
+            Event::fire(new IssueEvent($project_key, $id, $cur_user, ['event_key' => 'watched_issue']));
         } else {
             $flag = false;
             // trigger event of issue watched
-            Event::fire(new IssueEvent($project_key, $id, $cur_user, [ 'event_key' => 'unwatched_issue' ]));
+            Event::fire(new IssueEvent($project_key, $id, $cur_user, ['event_key' => 'unwatched_issue']));
         }
-        
+
         return Response()->json(['ecode' => 0, 'data' => ['id' => $id, 'user' => $cur_user, 'watching' => $flag]]);
     }
 
@@ -1287,7 +1280,7 @@ class IssueController extends Controller
 
                 $user_info = Sentinel::findById($assignee_id);
                 if ($user_info) {
-                    $assignee = [ 'id' => $assignee_id, 'name' => $user_info->first_name, 'email' => $user_info->email ];
+                    $assignee = ['id' => $assignee_id, 'name' => $user_info->first_name, 'email' => $user_info->email];
                     $updValues['assignee'] = $assignee;
                 }
             } else {
@@ -1309,7 +1302,7 @@ class IssueController extends Controller
         $workflow = $this->initializeWorkflow($issue['type']);
         $updValues = $updValues + $workflow;
 
-        $updValues['modifier'] = [ 'id' => $this->user->id, 'name' => $this->user->first_name, 'email' => $this->user->email ];
+        $updValues['modifier'] = ['id' => $this->user->id, 'name' => $this->user->first_name, 'email' => $this->user->email];
         $updValues['updated_at'] = time();
 
         $table = 'issue_' . $project_key;
@@ -1318,7 +1311,7 @@ class IssueController extends Controller
         // add to histroy table
         $snap_id = Provider::snap2His($project_key, $id, null, array_keys($updValues));
         // trigger event of issue edited
-        Event::fire(new IssueEvent($project_key, $id, $updValues['modifier'], [ 'event_key' => 'reset_issue', 'snap_id' => $snap_id ]));
+        Event::fire(new IssueEvent($project_key, $id, $updValues['modifier'], ['event_key' => 'reset_issue', 'snap_id' => $snap_id]));
 
         return $this->show($project_key, $id);
     }
@@ -1357,7 +1350,7 @@ class IssueController extends Controller
 
         $insValues['title'] = $title;
         // get reporter(creator)
-        $insValues['reporter'] = [ 'id' => $this->user->id, 'name' => $this->user->first_name, 'email' => $this->user->email ];
+        $insValues['reporter'] = ['id' => $this->user->id, 'name' => $this->user->first_name, 'email' => $this->user->email];
 
         $assignee_id = $request->input('assignee');
         if (isset($assignee_id)) {
@@ -1368,7 +1361,7 @@ class IssueController extends Controller
 
                 $user_info = Sentinel::findById($assignee_id);
                 if ($user_info) {
-                    $assignee = [ 'id' => $assignee_id, 'name' => $user_info->first_name, 'email' => $user_info->email ];
+                    $assignee = ['id' => $assignee_id, 'name' => $user_info->first_name, 'email' => $user_info->email];
                     $insValues['assignee'] = $assignee;
                 }
             } else {
@@ -1397,11 +1390,11 @@ class IssueController extends Controller
         // add to histroy table
         Provider::snap2His($project_key, $id, $schema);
         // create link of clone
-        Linked::create([ 'src' => $src_id, 'relation' => 'is cloned by', 'dest' => $id->__toString(), 'creator' => $insValues['reporter'] ]);
+        Linked::create(['src' => $src_id, 'relation' => 'is cloned by', 'dest' => $id->__toString(), 'creator' => $insValues['reporter']]);
         // trigger event of issue created
-        Event::fire(new IssueEvent($project_key, $id->__toString(), $insValues['reporter'], [ 'event_key' => 'create_issue' ]));
+        Event::fire(new IssueEvent($project_key, $id->__toString(), $insValues['reporter'], ['event_key' => 'create_issue']));
         // trigger event of link created
-        Event::fire(new IssueEvent($project_key, $src_id, $insValues['reporter'], [ 'event_key' => 'create_link', 'data' => [ 'relation' => 'is cloned by', 'dest' => $id->__toString() ] ]));
+        Event::fire(new IssueEvent($project_key, $src_id, $insValues['reporter'], ['event_key' => 'create_link', 'data' => ['relation' => 'is cloned by', 'dest' => $id->__toString()]]));
 
         return $this->show($project_key, $id->__toString());
     }
@@ -1431,7 +1424,7 @@ class IssueController extends Controller
         if (!isset($parent_id)) {
             $parent_id = '';
         }
- 
+
         $updValues = [];
         if ($parent_id) {
             // standard convert to subtask
@@ -1448,14 +1441,14 @@ class IssueController extends Controller
         $updValues['parent_id'] = $parent_id;
         $updValues['type'] = $type;
 
-        $updValues['modifier'] = [ 'id' => $this->user->id, 'name' => $this->user->first_name, 'email' => $this->user->email ];
+        $updValues['modifier'] = ['id' => $this->user->id, 'name' => $this->user->first_name, 'email' => $this->user->email];
         $updValues['updated_at'] = time();
         DB::collection($table)->where('_id', $id)->update($updValues);
 
         // add to histroy table
-        $snap_id = Provider::snap2His($project_key, $id, null, [ 'parent_id', 'type' ]);
+        $snap_id = Provider::snap2His($project_key, $id, null, ['parent_id', 'type']);
         // trigger event of issue moved
-        Event::fire(new IssueEvent($project_key, $id, $updValues['modifier'], [ 'event_key' => 'edit_issue', 'snap_id' => $snap_id ]));
+        Event::fire(new IssueEvent($project_key, $id, $updValues['modifier'], ['event_key' => 'edit_issue', 'snap_id' => $snap_id]));
 
         return $this->show($project_key, $id);
     }
@@ -1491,14 +1484,14 @@ class IssueController extends Controller
 
         $updValues = [];
         $updValues['parent_id'] = $parent_id;
-        $updValues['modifier'] = [ 'id' => $this->user->id, 'name' => $this->user->first_name, 'email' => $this->user->email ];
+        $updValues['modifier'] = ['id' => $this->user->id, 'name' => $this->user->first_name, 'email' => $this->user->email];
         $updValues['updated_at'] = time();
         DB::collection($table)->where('_id', $id)->update($updValues);
 
         // add to histroy table
-        $snap_id = Provider::snap2His($project_key, $id, null, [ 'parent_id' ]);
+        $snap_id = Provider::snap2His($project_key, $id, null, ['parent_id']);
         // trigger event of issue moved
-        Event::fire(new IssueEvent($project_key, $id, $updValues['modifier'], [ 'event_key' => 'move_issue', 'data' => [ 'old_parent' => $issue['parent_id'], 'new_parent' => $parent_id ] ]));
+        Event::fire(new IssueEvent($project_key, $id, $updValues['modifier'], ['event_key' => 'move_issue', 'data' => ['old_parent' => $issue['parent_id'], 'new_parent' => $parent_id]]));
 
         return $this->show($project_key, $id);
     }
@@ -1529,21 +1522,21 @@ class IssueController extends Controller
             throw new \UnexpectedValueException('the released version has been existed.', -11133);
         }
 
-        $user = [ 'id' => $this->user->id, 'name' => $this->user->first_name, 'email' => $this->user->email ];
-        $version = Version::create([ 'project_key' => $project_key, 'user' => $user, 'status' => 'released', 'released_time' => time() ] + $request->all());
+        $user = ['id' => $this->user->id, 'name' => $this->user->first_name, 'email' => $this->user->email];
+        $version = Version::create(['project_key' => $project_key, 'user' => $user, 'status' => 'released', 'released_time' => time()] + $request->all());
 
         foreach ($ids as $id) {
-            DB::collection('issue_' . $project_key)->where('_id', $id)->update([ 'resolve_version' => $version->id ]);
+            DB::collection('issue_' . $project_key)->where('_id', $id)->update(['resolve_version' => $version->id]);
             // add to histroy table
-            $snap_id = Provider::snap2His($project_key, $id, null, [ 'resolve_version' ]);
+            $snap_id = Provider::snap2His($project_key, $id, null, ['resolve_version']);
             // trigger event of issue moved
-            Event::fire(new IssueEvent($project_key, $id, $user, [ 'event_key' => 'edit_issue', 'snap_id' => $snap_id ]));
+            Event::fire(new IssueEvent($project_key, $id, $user, ['event_key' => 'edit_issue', 'snap_id' => $snap_id]));
         }
 
         $isSendMsg = $request->input('isSendMsg') && true;
-        Event::fire(new VersionEvent($project_key, $user, [ 'event_key' => 'create_release_version', 'isSendMsg' => $isSendMsg, 'data' => [ 'released_issues' => $ids, 'release_version' => $version->toArray() ] ]));
+        Event::fire(new VersionEvent($project_key, $user, ['event_key' => 'create_release_version', 'isSendMsg' => $isSendMsg, 'data' => ['released_issues' => $ids, 'release_version' => $version->toArray()]]));
 
-        return Response()->json([ 'ecode' => 0, 'data' => [ 'ids' => $ids ] ]);
+        return Response()->json(['ecode' => 0, 'data' => ['ids' => $ids]]);
     }
 
     /**
@@ -1553,7 +1546,7 @@ class IssueController extends Controller
      */
     public function getTimeTrackSetting()
     {
-        $options = [ 'w2d' => 5, 'd2h' => 8 ];
+        $options = ['w2d' => 5, 'd2h' => 8];
 
         $setting = SysSetting::first();
         if ($setting && isset($setting->properties)) {
@@ -1575,10 +1568,10 @@ class IssueController extends Controller
     public function getLinkRelations()
     {
         $relations = [
-          [ 'id' => 'blocks', 'out' => 'blocks', 'in' => 'is blocked by' ],
-          [ 'id' => 'clones', 'out' => 'clones', 'in' => 'is cloned by' ],
-          [ 'id' => 'duplicates', 'out' => 'duplicates', 'in' => 'is duplicated by' ],
-          [ 'id' => 'relates', 'out' => 'relates to', 'in' => 'relates to' ],
+            ['id' => 'blocks', 'out' => 'blocks', 'in' => 'is blocked by'],
+            ['id' => 'clones', 'out' => 'clones', 'in' => 'is cloned by'],
+            ['id' => 'duplicates', 'out' => 'duplicates', 'in' => 'is duplicated by'],
+            ['id' => 'relates', 'out' => 'relates to', 'in' => 'relates to'],
         ];
         return $relations;
     }
@@ -1595,19 +1588,19 @@ class IssueController extends Controller
             return [];
         }
 
-        $classified_issues  = [];
+        $classified_issues = [];
         foreach ($issues as $issue) {
             if (isset($issue['parent']) && $issue['parent']) {
                 if (isset($classified_issues[$issue['parent']['no']]) && $classified_issues[$issue['parent']['no']]) {
-                    $classified_issues[$issue['parent']['no']][] =  $issue;
+                    $classified_issues[$issue['parent']['no']][] = $issue;
                 } else {
-                    $classified_issues[$issue['parent']['no']] = [ $issue ];
+                    $classified_issues[$issue['parent']['no']] = [$issue];
                 }
             } else {
                 if (isset($classified_issues[$issue['no']]) && $classified_issues[$issue['no']]) {
                     array_unshift($classified_issues[$issue['no']], $issue);
                 } else {
-                    $classified_issues[$issue['no']] = [ $issue ];
+                    $classified_issues[$issue['no']] = [$issue];
                 }
             }
         }
@@ -1665,7 +1658,7 @@ class IssueController extends Controller
      * @param  bool   $isUpdRank
      * @return array
      */
-    public function arrangeIssues($project_key, $issues, $from, $from_board_id, $isUpdRank=false)
+    public function arrangeIssues($project_key, $issues, $from, $from_board_id, $isUpdRank = false)
     {
         if ($from === 'his_sprint') {
             $this->addAvatar($issues);
@@ -1676,7 +1669,7 @@ class IssueController extends Controller
         $classified_issues = $this->classifyIssues($issues);
 
         // whether the board is ranked
-        $rankmap = BoardRankMap::where([ 'board_id' => $from_board_id ])->first();
+        $rankmap = BoardRankMap::where(['board_id' => $from_board_id])->first();
         if (!$rankmap) {
             $issues = $this->flatIssues($classified_issues);
 
@@ -1684,8 +1677,8 @@ class IssueController extends Controller
             foreach ($issues as $issue) {
                 $rank[] = $issue['no'];
             }
-            
-            BoardRankMap::create([ 'board_id' => $from_board_id, 'rank' => $rank ]);
+
+            BoardRankMap::create(['board_id' => $from_board_id, 'rank' => $rank]);
 
             if ($from === 'active_sprint') {
                 $issues = $this->sprintFilter($project_key, $issues);
@@ -1694,7 +1687,7 @@ class IssueController extends Controller
             $this->addAvatar($issues);
             return $issues;
         }
- 
+
         $sub2parent_map = [];
         foreach ($issues as $issue) {
             if (isset($issue['parent']) && $issue['parent']) {
@@ -1773,7 +1766,7 @@ class IssueController extends Controller
 
             if (array_diff_assoc($new_rank, $rank) || array_diff_assoc($rank, $new_rank)) {
                 $rankmap = BoardRankMap::where('board_id', $from_board_id)->first();
-                $rankmap && $rankmap->update([ 'rank' => $new_rank ]);
+                $rankmap && $rankmap->update(['rank' => $new_rank]);
             }
         }
 
@@ -1825,7 +1818,7 @@ class IssueController extends Controller
         }
 
         $states = [];
-        $state_list =  Provider::getStateOptions($project_key);
+        $state_list = Provider::getStateOptions($project_key);
         foreach ($state_list as $state) {
             $states[$state['_id']] = $state['name'];
         }
@@ -1878,28 +1871,28 @@ class IssueController extends Controller
             $fields[$field->key] = $tmp;
         }
 
-        $fields['no'] = [ 'name' => 'NO', 'type' => 'Number' ];
-        $fields['type'] = [ 'name' => '类型', 'type' => 'Select' ];
-        $fields['state'] = [ 'name' => '状态', 'type' => 'Select' ];
-        $fields['created_at'] = [ 'name' => '创建时间', 'type' => 'DateTimePicker' ];
-        $fields['updated_at'] = [ 'name' => '更新时间', 'type' => 'DateTimePicker' ];
-        $fields['resolved_at'] = [ 'name' => '解决时间', 'type' => 'DateTimePicker' ];
-        $fields['closed_at'] = [ 'name' => '关闭时间', 'type' => 'DateTimePicker' ];
-        $fields['reporter'] = [ 'name' => '报告者', 'type' => '' ];
-        $fields['resolver'] = [ 'name' => '解决者', 'type' => '' ];
-        $fields['closer'] = [ 'name' => '关闭者', 'type' => '' ];
-        $fields['sprints'] = [ 'name' => 'Sprint', 'type' => '' ];
+        $fields['no'] = ['name' => 'NO', 'type' => 'Number'];
+        $fields['type'] = ['name' => '类型', 'type' => 'Select'];
+        $fields['state'] = ['name' => '状态', 'type' => 'Select'];
+        $fields['created_at'] = ['name' => '创建时间', 'type' => 'DateTimePicker'];
+        $fields['updated_at'] = ['name' => '更新时间', 'type' => 'DateTimePicker'];
+        $fields['resolved_at'] = ['name' => '解决时间', 'type' => 'DateTimePicker'];
+        $fields['closed_at'] = ['name' => '关闭时间', 'type' => 'DateTimePicker'];
+        $fields['reporter'] = ['name' => '报告者', 'type' => ''];
+        $fields['resolver'] = ['name' => '解决者', 'type' => ''];
+        $fields['closer'] = ['name' => '关闭者', 'type' => ''];
+        $fields['sprints'] = ['name' => 'Sprint', 'type' => ''];
 
         return [
-          'types' => $types,
-          'states' => $states,
-          'resolutions' => $resolutions,
-          'priorities' => $priorities,
-          'versions' => $versions,
-          'modules' => $modules,
-          'epics' => $epics,
-          'sprints' => $sprints,
-          'fields' => $fields,
+            'types' => $types,
+            'states' => $states,
+            'resolutions' => $resolutions,
+            'priorities' => $priorities,
+            'versions' => $versions,
+            'modules' => $modules,
+            'epics' => $epics,
+            'sprints' => $sprints,
+            'fields' => $fields,
         ];
     }
 
@@ -2074,22 +2067,22 @@ class IssueController extends Controller
                     }
                 }
 
-                $user_relate_fields = [ 'assignee' => '经办人', 'reporter' => '报告者', 'resolver' => '解决者', 'closer' => '关闭时间' ];
+                $user_relate_fields = ['assignee' => '经办人', 'reporter' => '报告者', 'resolver' => '解决者', 'closer' => '关闭时间'];
                 foreach ($user_relate_fields as $uk => $uv) {
                     if (isset($value[$uk]) && $value[$uk]) {
                         $tmp_user = EloquentUser::where('first_name', $value[$uk])->first();
                         if (!$tmp_user) {
                             $err_msgs[$cur_title][] = $uv . '列用户不存在。';
                         } else {
-                            $issue[$uk] = [ 'id' => $tmp_user->id, 'name' => $tmp_user->first_name, 'email' => $tmp_user->email ];
+                            $issue[$uk] = ['id' => $tmp_user->id, 'name' => $tmp_user->first_name, 'email' => $tmp_user->email];
                             if ($uk == 'resolver') {
-                                $issue['his_resolvers'] = [ $tmp_user->id ];
+                                $issue['his_resolvers'] = [$tmp_user->id];
                             }
                         }
                     }
                 }
 
-                $time_relate_fields = [ 'created_at' => '创建时间', 'resolved_at' => '解决时间', 'closed_at' => '关闭时间', 'updated_at' => '更新时间' ];
+                $time_relate_fields = ['created_at' => '创建时间', 'resolved_at' => '解决时间', 'closed_at' => '关闭时间', 'updated_at' => '更新时间'];
                 foreach ($time_relate_fields as $tk => $tv) {
                     if (isset($value[$tk]) && $value[$tk]) {
                         $stamptime = strtotime($value[$tk]);
@@ -2115,7 +2108,7 @@ class IssueController extends Controller
                         continue;
                     }
 
-                    if (in_array($field_key, [ 'priority', 'resolution', 'assignee' ])) {
+                    if (in_array($field_key, ['priority', 'resolution', 'assignee'])) {
                         continue;
                     }
 
@@ -2142,7 +2135,7 @@ class IssueController extends Controller
                         if (!$tmp_user) {
                             $err_msgs[$cur_title][] = $fields[$field_key] . '列用户不存在。';
                         } else {
-                            $issue[$field_key] = [ 'id' => $tmp_user->id, 'name' => $tmp_user->first_name, 'email' => $tmp_user->email ];
+                            $issue[$field_key] = ['id' => $tmp_user->id, 'name' => $tmp_user->first_name, 'email' => $tmp_user->email];
                         }
                     } elseif ($field['type'] === 'MultiUser') {
                         $issue[$field_key] = [];
@@ -2156,11 +2149,11 @@ class IssueController extends Controller
                             if (!$tmp_user) {
                                 $err_msgs[$cur_title][] = $fields[$field_key] . '列用户不存在。';
                             } elseif (!in_array($tmp_user->id, $issue[$field_key . '_ids'])) {
-                                $issue[$field_key][] = [ 'id' => $tmp_user->id, 'name' => $tmp_user->first_name, 'email' => $tmp_user->email ];
+                                $issue[$field_key][] = ['id' => $tmp_user->id, 'name' => $tmp_user->first_name, 'email' => $tmp_user->email];
                                 $issue[$field_key . '_ids'][] = $tmp_user->id;
                             }
                         }
-                    } elseif (in_array($field['type'], [ 'Select', 'RadioGroup', 'SingleVersion' ])) {
+                    } elseif (in_array($field['type'], ['Select', 'RadioGroup', 'SingleVersion'])) {
                         foreach ($field['optionValues'] as $val) {
                             if ($val['name'] === $field_value) {
                                 $issue[$field_key] = $val['id'];
@@ -2170,7 +2163,7 @@ class IssueController extends Controller
                         if (!isset($issue[$field_key])) {
                             $err_msgs[$cur_title][] = $fields[$field_key] . '列值匹配失败。';
                         }
-                    } elseif (in_array($field['type'], [ 'MultiSelect', 'CheckboxGroup', 'MultiVersion' ])) {
+                    } elseif (in_array($field['type'], ['MultiSelect', 'CheckboxGroup', 'MultiVersion'])) {
                         $issue[$field_key] = [];
                         foreach (explode(',', $field_value) as $val) {
                             $val = trim($val);
@@ -2191,7 +2184,7 @@ class IssueController extends Controller
                             }
                         }
                         $issue[$field_key] = array_values(array_unique($issue[$field_key]));
-                    } elseif (in_array($field['type'], [ 'DatePicker', 'DatetimePicker' ])) {
+                    } elseif (in_array($field['type'], ['DatePicker', 'DatetimePicker'])) {
                         $stamptime = strtotime($field_value);
                         if ($stamptime === false) {
                             $err_msgs[$cur_title][] = $fields[$field_key] . '列值格式错误。';
@@ -2253,7 +2246,7 @@ class IssueController extends Controller
                         if (isset($issue['parent'])) {
                             unset($issue['parent']);
                         }
-                        $new_subtask_issues[] = $issue + [ 'parent_id' => $parent_issue['_id']->__toString() ];
+                        $new_subtask_issues[] = $issue + ['parent_id' => $parent_issue['_id']->__toString()];
                     } else {
                         $fatal_err_msgs[$issue['title']][] = $err_msgs[$issue['title']][] = '父级任务不存在。';
                     }
@@ -2270,7 +2263,6 @@ class IssueController extends Controller
             } elseif ($err_msgs) {
                 return;
             }
-
 
             $new_types = [];
             foreach ($types as $type) {
@@ -2296,7 +2288,6 @@ class IssueController extends Controller
             }
         });
 
-
         $emsgs = '';
         if ($pattern == '2') {
             $emsgs = array_filter($fatal_err_msgs);
@@ -2305,9 +2296,9 @@ class IssueController extends Controller
         }
 
         if ($emsgs) {
-            return Response()->json([ 'ecode' => -11146, 'emsg' => $emsgs ]);
+            return Response()->json(['ecode' => -11146, 'emsg' => $emsgs]);
         } else {
-            return Response()->json([ 'ecode' => 0, 'emsg' => '' ]);
+            return Response()->json(['ecode' => 0, 'emsg' => '']);
         }
     }
 
@@ -2332,12 +2323,12 @@ class IssueController extends Controller
         $insValues['no'] = $max_no;
 
         if (!isset($insValues['assignee']) || !$insValues['assignee']) {
-            $insValues['assignee'] = [ 'id' => $this->user->id, 'name' => $this->user->first_name, 'email' => $this->user->email ];
+            $insValues['assignee'] = ['id' => $this->user->id, 'name' => $this->user->first_name, 'email' => $this->user->email];
         }
 
         // get reporter(creator)
         if (!isset($insValues['reporter']) || !$insValues['reporter']) {
-            $insValues['reporter'] = [ 'id' => $this->user->id, 'name' => $this->user->first_name, 'email' => $this->user->email ];
+            $insValues['reporter'] = ['id' => $this->user->id, 'name' => $this->user->first_name, 'email' => $this->user->email];
         }
         if (!isset($insValues['created_at']) || !$insValues['created_at']) {
             $insValues['created_at'] = time();
@@ -2357,7 +2348,7 @@ class IssueController extends Controller
         // add to histroy table
         Provider::snap2His($project_key, $id, $schema);
         // trigger event of issue created
-        Event::fire(new IssueEvent($project_key, $id, $insValues['reporter'], [ 'event_key' => 'create_issue' ]));
+        Event::fire(new IssueEvent($project_key, $id, $insValues['reporter'], ['event_key' => 'create_issue']));
 
         if (isset($insValues['labels']) && $insValues['labels']) {
             $this->createLabels($project_key, $insValues['labels']);
@@ -2392,7 +2383,7 @@ class IssueController extends Controller
             return [];
         }
 
-        $caller = [ 'id' => $this->user->id, 'name' => $this->user->first_name, 'email' => $this->user->email ];
+        $caller = ['id' => $this->user->id, 'name' => $this->user->first_name, 'email' => $this->user->email];
         $wf_entry->fakeNewCurrentStep($fake_step, $caller);
 
         $ret['entry_id'] = $wf_entry->getEntryId();
@@ -2439,7 +2430,7 @@ class IssueController extends Controller
                     continue;
                 }
 
-                if (in_array($fk, [ 'assignee', 'reporter', 'closer', 'resolver' ])) {
+                if (in_array($fk, ['assignee', 'reporter', 'closer', 'resolver'])) {
                     $tmp[] = isset($issue[$fk]['name']) ? $issue[$fk]['name'] : '';
                 } elseif ($fk == 'module') {
                     $new_modules = [];
@@ -2525,11 +2516,11 @@ class IssueController extends Controller
                             }
                             $tmp[] = implode(',', array_filter($ov_names));
                         } else {
-                            $tmp[] = (string)$issue[$fk];
+                            $tmp[] = (string) $issue[$fk];
                         }
                     }
                 } else {
-                    $tmp[] = (string)$issue[$fk];
+                    $tmp[] = (string) $issue[$fk];
                 }
             }
             $new_issues[] = $tmp;
@@ -2586,7 +2577,7 @@ class IssueController extends Controller
             return Response()->json(['ecode' => -10002, 'emsg' => 'permission denied.']);
         }
 
-        $user = [ 'id' => $this->user->id, 'name' => $this->user->first_name, 'email' => $this->user->email ];
+        $user = ['id' => $this->user->id, 'name' => $this->user->first_name, 'email' => $this->user->email];
 
         $table = 'issue_' . $project_key;
         foreach ($ids as $id) {
@@ -2605,25 +2596,25 @@ class IssueController extends Controller
                 ->get();
             foreach ($subtasks as $subtask) {
                 $sub_id = $subtask['_id']->__toString();
-                DB::collection($table)->where('_id', $sub_id)->update([ 'del_flg' => 1 ]);
+                DB::collection($table)->where('_id', $sub_id)->update(['del_flg' => 1]);
 
                 // delete linked relation
                 DB::collection('linked')->where('src', $sub_id)->orWhere('dest', $sub_id)->delete();
 
-                Event::fire(new IssueEvent($project_key, $sub_id, $user, [ 'event_key' => 'del_issue' ]));
+                Event::fire(new IssueEvent($project_key, $sub_id, $user, ['event_key' => 'del_issue']));
             }
 
             // delete linked relation
             DB::collection('linked')->where('src', $id)->orWhere('dest', $id)->delete();
 
             // delete this issue
-            DB::collection($table)->where('_id', $id)->update([ 'del_flg' => 1 ]);
+            DB::collection($table)->where('_id', $id)->update(['del_flg' => 1]);
 
             // trigger event of issue deleted
-            Event::fire(new IssueEvent($project_key, $id, $user, [ 'event_key' => 'del_issue' ]));
+            Event::fire(new IssueEvent($project_key, $id, $user, ['event_key' => 'del_issue']));
         }
 
-        return Response()->json([ 'ecode' => 0, 'data' => [ 'ids' => $ids ] ]);
+        return Response()->json(['ecode' => 0, 'data' => ['ids' => $ids]]);
     }
 
     /**
@@ -2647,7 +2638,7 @@ class IssueController extends Controller
             if (!$values['type']) {
                 throw new \UnexpectedValueException('the issue type can not be empty.', -11100);
             }
-        
+
             if (!($schemas[$values['type']] = Provider::getSchemaByType($values['type']))) {
                 throw new \UnexpectedValueException('the schema of the type is not existed.', -11101);
             }
@@ -2683,7 +2674,7 @@ class IssueController extends Controller
             } elseif ($key == 'assignee' || $field->type == 'SingleUser') {
                 $user_info = Sentinel::findById($val);
                 if ($user_info) {
-                    $updValues[$key] = [ 'id' => $val, 'name' => $user_info->first_name, 'email' => $user_info->email ];
+                    $updValues[$key] = ['id' => $val, 'name' => $user_info->first_name, 'email' => $user_info->email];
                 }
             } elseif ($field->type == 'MultiUser') {
                 $user_ids = $val;
@@ -2692,7 +2683,7 @@ class IssueController extends Controller
                 foreach ($user_ids as $uid) {
                     $user_info = Sentinel::findById($uid);
                     if ($user_info) {
-                        array_push($updValues[$key], [ 'id' => $uid, 'name' => $user_info->first_name, 'email' => $user_info->email ]);
+                        array_push($updValues[$key], ['id' => $uid, 'name' => $user_info->first_name, 'email' => $user_info->email]);
                     }
                     $new_user_ids[] = $uid;
                 }
@@ -2708,7 +2699,7 @@ class IssueController extends Controller
             }
         }
 
-        $updValues['modifier'] = [ 'id' => $this->user->id, 'name' => $this->user->first_name, 'email' => $this->user->email ];
+        $updValues['modifier'] = ['id' => $this->user->id, 'name' => $this->user->first_name, 'email' => $this->user->email];
         $updValues['updated_at'] = time();
 
         $table = 'issue_' . $project_key;
@@ -2739,7 +2730,7 @@ class IssueController extends Controller
             $snap_id = Provider::snap2His($project_key, $id, $schema, array_keys(array_only($values, $valid_keys)));
 
             // trigger event of issue edited
-            Event::fire(new IssueEvent($project_key, $id, $updValues['modifier'], [ 'event_key' => 'edit_issue', 'snap_id' => $snap_id ]));
+            Event::fire(new IssueEvent($project_key, $id, $updValues['modifier'], ['event_key' => 'edit_issue', 'snap_id' => $snap_id]));
         }
 
         // create the Labels for project
@@ -2747,6 +2738,6 @@ class IssueController extends Controller
             $this->createLabels($project_key, $updValues['labels']);
         }
 
-        return Response()->json([ 'ecode' => 0, 'data' => [ 'ids' => $ids ] ]);
+        return Response()->json(['ecode' => 0, 'data' => ['ids' => $ids]]);
     }
 }

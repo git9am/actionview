@@ -1,0 +1,7 @@
+front-end
+node_modules
+vendor
+composer.lock
+.git
+Dockerfile
+.dockerignore

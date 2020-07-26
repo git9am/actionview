@@ -2,14 +2,12 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Event;
 use App\Events\IssueEvent;
-
-use App\Http\Requests;
 use App\Http\Controllers\Controller;
 use App\Project\Eloquent\Worklog;
 use App\Project\Provider;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Event;
 
 class WorklogController extends Controller
 {
@@ -28,7 +26,7 @@ class WorklogController extends Controller
             ->where('issue_id', $issue_id)
             ->orderBy('recorded_at', $sort)
             ->get();
-        return Response()->json(['ecode' => 0, 'data' => $worklogs, 'options' => [ 'current_time' => time() ]]);
+        return Response()->json(['ecode' => 0, 'data' => $worklogs, 'options' => ['current_time' => time()]]);
     }
 
     /**
@@ -101,11 +99,11 @@ class WorklogController extends Controller
             throw new \UnexpectedValueException('the issue is not existed.', -11308);
         }
 
-        $recorder = [ 'id' => $this->user->id, 'name' => $this->user->first_name, 'email' => $this->user->email ];
-        $worklog = Worklog::create([ 'project_key' => $project_key, 'issue_id' => $issue_id, 'recorder' => $recorder, 'recorded_at' => time() ] + $values);
+        $recorder = ['id' => $this->user->id, 'name' => $this->user->first_name, 'email' => $this->user->email];
+        $worklog = Worklog::create(['project_key' => $project_key, 'issue_id' => $issue_id, 'recorder' => $recorder, 'recorded_at' => time()] + $values);
 
         // trigger event of issue worklog added
-        Event::fire(new IssueEvent($project_key, $issue_id, $recorder, [ 'event_key' => 'add_worklog', 'data' => $values ]));
+        Event::fire(new IssueEvent($project_key, $issue_id, $recorder, ['event_key' => 'add_worklog', 'data' => $values]));
 
         return Response()->json(['ecode' => 0, 'data' => $worklog]);
     }
@@ -200,12 +198,12 @@ class WorklogController extends Controller
         if (isset($comments)) {
             $values['comments'] = $comments ?: '';
         }
-        $worklog->fill([ 'edited_flag' => 1 ] + array_except($values, [ 'recorder', 'recorded_at' ]))->save();
+        $worklog->fill(['edited_flag' => 1] + array_except($values, ['recorder', 'recorded_at']))->save();
 
         // trigger event of worklog edited
         $worklog = Worklog::find($id);
-        $cur_user = [ 'id' => $this->user->id, 'name' => $this->user->first_name, 'email' => $this->user->email ];
-        Event::fire(new IssueEvent($project_key, $issue_id, $cur_user, [ 'event_key' => 'edit_worklog', 'data' => $worklog->toArray() ]));
+        $cur_user = ['id' => $this->user->id, 'name' => $this->user->first_name, 'email' => $this->user->email];
+        Event::fire(new IssueEvent($project_key, $issue_id, $cur_user, ['event_key' => 'edit_worklog', 'data' => $worklog->toArray()]));
 
         return Response()->json(['ecode' => 0, 'data' => $worklog]);
     }
@@ -230,8 +228,8 @@ class WorklogController extends Controller
         Worklog::destroy($id);
 
         // trigger event of worklog deleted
-        $cur_user = [ 'id' => $this->user->id, 'name' => $this->user->first_name, 'email' => $this->user->email ];
-        Event::fire(new IssueEvent($project_key, $issue_id, $cur_user, [ 'event_key' => 'del_worklog', 'data' => $worklog->toArray() ]));
+        $cur_user = ['id' => $this->user->id, 'name' => $this->user->first_name, 'email' => $this->user->email];
+        Event::fire(new IssueEvent($project_key, $issue_id, $cur_user, ['event_key' => 'del_worklog', 'data' => $worklog->toArray()]));
 
         return Response()->json(['ecode' => 0, 'data' => ['id' => $id]]);
     }

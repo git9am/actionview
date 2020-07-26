@@ -1,14 +1,9 @@
 <?php
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
-
-use App\Http\Requests;
 use App\Http\Controllers\Controller;
 use App\Project\Eloquent\Webhooks;
-use App\Project\Eloquent\Project;
-use App\Project\Provider;
-use DB;
+use Illuminate\Http\Request;
 
 class WebhooksController extends Controller
 {
@@ -52,7 +47,7 @@ class WebhooksController extends Controller
             $insValues['ssl'] = $ssl;
         }
 
-        $webhook = Webhooks::create([ 'project_key' => $project_key, 'status' => 'enabled' ] + $insValues);
+        $webhook = Webhooks::create(['project_key' => $project_key, 'status' => 'enabled'] + $insValues);
         return Response()->json(['ecode' => 0, 'data' => $webhook]);
     }
 

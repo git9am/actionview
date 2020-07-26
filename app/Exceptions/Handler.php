@@ -3,8 +3,6 @@
 namespace App\Exceptions;
 
 use Exception;
-use Illuminate\Auth\Access\AuthorizationException;
-use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Foundation\Exceptions\Handler as ExceptionHandler;
 use Illuminate\Validation\ValidationException;
 use Symfony\Component\HttpKernel\Exception\HttpException;
@@ -24,9 +22,17 @@ class Handler extends ExceptionHandler
     ];
 
     /**
-     * Report or log an exception.
+     * A list of the inputs that are never flashed for validation exceptions.
      *
-     * This is a great spot to send exceptions to Sentry, Bugsnag, etc.
+     * @var array
+     */
+    protected $dontFlash = [
+        'password',
+        'password_confirmation',
+    ];
+
+    /**
+     * Report or log an exception.
      *
      * @param  \Exception  $e
      * @return void
